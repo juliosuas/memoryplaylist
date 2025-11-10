@@ -3,8 +3,7 @@ import { Auth } from "@/components/Auth";
 import { ExperienceForm } from "@/components/ExperienceForm";
 import { PlaylistResult } from "@/components/PlaylistResult";
 import { Button } from "@/components/ui/button";
-import { LogOut, Music } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { LogOut, Heart } from "lucide-react";
 import { toast } from "sonner";
 
 const Index = () => {
@@ -15,17 +14,18 @@ const Index = () => {
   useEffect(() => {
     checkUser();
     
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
+    const handleStorageChange = () => {
+      checkUser();
+    };
 
-    return () => subscription.unsubscribe();
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
-  const checkUser = async () => {
+  const checkUser = () => {
     try {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      setUser(currentUser);
+      const currentUser = localStorage.getItem("fryda_current_user");
+      setUser(currentUser ? JSON.parse(currentUser) : null);
     } catch (error) {
       console.error("Error:", error);
     } finally {
@@ -33,9 +33,10 @@ const Index = () => {
     }
   };
 
-  const handleSignOut = async () => {
+  const handleSignOut = () => {
     try {
-      await supabase.auth.signOut();
+      localStorage.removeItem("fryda_current_user");
+      setUser(null);
       toast.success("Sesión cerrada");
       setCurrentPlaylistId(null);
     } catch (error: any) {
@@ -47,7 +48,7 @@ const Index = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary">
         <div className="animate-pulse text-center space-y-4">
-          <Music className="w-16 h-16 text-primary mx-auto" />
+          <Heart className="w-16 h-16 text-primary mx-auto fill-primary" />
           <p className="text-muted-foreground">Cargando...</p>
         </div>
       </div>
@@ -65,11 +66,14 @@ const Index = () => {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-              <Music className="w-6 h-6 text-white" />
+              <Heart className="w-6 h-6 text-white fill-white" />
             </div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Mood Playlist
-            </h1>
+            <div>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                Fryda
+              </h1>
+              <p className="text-xs text-muted-foreground">Every memory has its song</p>
+            </div>
           </div>
           <Button
             onClick={handleSignOut}
@@ -98,7 +102,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="border-t border-border/50 backdrop-blur-sm bg-card/30 mt-auto">
         <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground">
-          Crea playlists que reflejan tus emociones
+          Every memory has its song
         </div>
       </footer>
     </div>

@@ -6,7 +6,6 @@ import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Upload, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase";
 
 interface ExperienceFormProps {
   onPlaylistGenerated: (playlistId: string) => void;
@@ -40,42 +39,82 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
 
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuario no autenticado");
+      const currentUser = JSON.parse(localStorage.getItem("fryda_current_user") || "null");
+      if (!currentUser) throw new Error("Usuario no autenticado");
 
-      let photoUrl = "";
-      
-      // Subir foto si existe
+      let photoUrl = null;
+
+      // Convertir foto a base64 si existe
       if (photo) {
-        const fileExt = photo.name.split(".").pop();
-        const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from("experience-photos")
-          .upload(fileName, photo);
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from("experience-photos")
-          .getPublicUrl(fileName);
-        
-        photoUrl = publicUrl;
+        const reader = new FileReader();
+        photoUrl = await new Promise<string>((resolve) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(photo);
+        });
       }
 
-      // Llamar a edge function para analizar emoción y generar playlist
-      const { data, error } = await supabase.functions.invoke("analyze-emotion", {
-        body: {
-          description,
-          photoUrl,
-          discoveryPercentage: discoveryPercentage[0],
-          userId: user.id,
-        },
-      });
+      // Crear experiencia en localStorage
+      const experienceId = Date.now().toString();
+      const experience = {
+        id: experienceId,
+        user_id: currentUser.id,
+        description,
+        photo_url: photoUrl,
+        created_at: new Date().toISOString(),
+      };
 
-      if (error) throw error;
+      const experiences = JSON.parse(localStorage.getItem("fryda_experiences") || "[]");
+      experiences.push(experience);
+      localStorage.setItem("fryda_experiences", JSON.stringify(experiences));
 
-      toast.success(`¡Playlist generada! Emoción: ${data.emotion}`);
-      onPlaylistGenerated(data.playlistId);
+      // Mock análisis emocional
+      const emotions = ["feliz", "nostálgico", "energético", "melancólico", "tranquilo", "romántico", "motivado"];
+      const detectedEmotion = emotions[Math.floor(Math.random() * emotions.length)];
+
+      // Mock playlist
+      const mockTracks = [
+        { track_name: "Here Comes The Sun", artist: "The Beatles", album: "Abbey Road", is_new_discovery: false },
+        { track_name: "Don't Stop Me Now", artist: "Queen", album: "Jazz", is_new_discovery: true },
+        { track_name: "Good Vibrations", artist: "The Beach Boys", album: "Smiley Smile", is_new_discovery: false },
+        { track_name: "Walking On Sunshine", artist: "Katrina & The Waves", album: "Walking on Sunshine", is_new_discovery: true },
+        { track_name: "Happy", artist: "Pharrell Williams", album: "G I R L", is_new_discovery: false },
+      ];
+
+      const playlistId = Date.now().toString();
+      const playlist = {
+        id: playlistId,
+        user_id: currentUser.id,
+        experience_id: experienceId,
+        name: `Playlist ${detectedEmotion}`,
+        emotion: detectedEmotion,
+        discovery_percentage: discoveryPercentage[0],
+        created_at: new Date().toISOString(),
+      };
+
+      const playlists = JSON.parse(localStorage.getItem("fryda_playlists") || "[]");
+      playlists.push(playlist);
+      localStorage.setItem("fryda_playlists", JSON.stringify(playlists));
+
+      // Guardar tracks
+      const tracks = mockTracks.map((track, index) => ({
+        id: `${playlistId}-${index}`,
+        playlist_id: playlistId,
+        ...track,
+        created_at: new Date().toISOString(),
+      }));
+
+      const allTracks = JSON.parse(localStorage.getItem("fryda_tracks") || "[]");
+      allTracks.push(...tracks);
+      localStorage.setItem("fryda_tracks", JSON.stringify(allTracks));
+
+      toast.success(`¡Playlist generada! Emoción: ${detectedEmotion}`);
+      onPlaylistGenerated(playlistId);
+
+      // Reset form
+      setDescription("");
+      setPhoto(null);
+      setPhotoPreview("");
+      setDiscoveryPercentage([50]);
     } catch (error: any) {
       console.error("Error:", error);
       toast.error(error.message || "Error al generar playlist");
@@ -86,6 +125,14 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
 
   return (
     <Card className="p-6 space-y-6 shadow-[var(--shadow-soft)] backdrop-blur-sm bg-card/80">
+      {/* Hero Title */}
+      <div className="text-center py-8">
+        <h1 className="text-7xl md:text-8xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent mb-2">
+          Fryda
+        </h1>
+        <p className="text-muted-foreground italic">Every memory has its song</p>
+      </div>
+
       <div className="space-y-2">
         <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
           Comparte tu Momento

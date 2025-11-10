@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
 export const Auth = () => {
@@ -19,23 +18,37 @@ export const Auth = () => {
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        toast.success("¡Bienvenido de vuelta!");
-      } else {
-        const { error } = await supabase.auth.signUp({ email, password });
-        if (error) throw error;
+        // Mock login - check localStorage
+        const users = JSON.parse(localStorage.getItem("fryda_users") || "[]");
+        const user = users.find((u: any) => u.email === email && u.password === password);
         
-        // Crear perfil del usuario
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase.from("user_profiles").insert({
-            user_id: user.id,
-            name: name || email.split("@")[0],
-          });
+        if (!user) {
+          throw new Error("Credenciales incorrectas");
         }
         
+        localStorage.setItem("fryda_current_user", JSON.stringify(user));
+        toast.success("¡Bienvenido de vuelta!");
+        window.dispatchEvent(new Event("storage"));
+      } else {
+        // Mock signup - save to localStorage
+        const users = JSON.parse(localStorage.getItem("fryda_users") || "[]");
+        const existingUser = users.find((u: any) => u.email === email);
+        
+        if (existingUser) {
+          throw new Error("El usuario ya existe");
+        }
+        
+        const newUser = { 
+          id: Date.now().toString(), 
+          email, 
+          password,
+          name: name || email.split("@")[0] 
+        };
+        users.push(newUser);
+        localStorage.setItem("fryda_users", JSON.stringify(users));
+        localStorage.setItem("fryda_current_user", JSON.stringify(newUser));
         toast.success("¡Cuenta creada exitosamente!");
+        window.dispatchEvent(new Event("storage"));
       }
     } catch (error: any) {
       toast.error(error.message || "Error en la autenticación");
@@ -48,10 +61,10 @@ export const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-secondary p-4">
       <Card className="w-full max-w-md shadow-[var(--shadow-soft)] border-border/50">
         <CardHeader className="space-y-2">
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            {isLogin ? "Iniciar Sesión" : "Crear Cuenta"}
+          <CardTitle className="text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent text-center mb-2">
+            Fryda
           </CardTitle>
-          <CardDescription className="text-muted-foreground">
+          <CardDescription className="text-muted-foreground text-center">
             {isLogin
               ? "Ingresa para crear playlists emocionales"
               : "Registrate para comenzar tu viaje musical"}

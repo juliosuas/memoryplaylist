@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Music, Heart, Sparkles, ArrowLeft } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
 interface Track {
@@ -29,22 +28,15 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
 
   const loadPlaylist = async () => {
     try {
-      const { data: playlistData, error: playlistError } = await supabase
-        .from("playlists")
-        .select("*")
-        .eq("id", playlistId)
-        .single();
+      // Cargar desde localStorage
+      const playlists = JSON.parse(localStorage.getItem("fryda_playlists") || "[]");
+      const playlistData = playlists.find((p: any) => p.id === playlistId);
 
-      if (playlistError) throw playlistError;
+      if (!playlistData) throw new Error("Playlist no encontrada");
       setPlaylist(playlistData);
 
-      const { data: tracksData, error: tracksError } = await supabase
-        .from("playlist_tracks")
-        .select("*")
-        .eq("playlist_id", playlistId)
-        .order("created_at", { ascending: true });
-
-      if (tracksError) throw tracksError;
+      const allTracks = JSON.parse(localStorage.getItem("fryda_tracks") || "[]");
+      const tracksData = allTracks.filter((t: any) => t.playlist_id === playlistId);
       setTracks(tracksData || []);
     } catch (error: any) {
       console.error("Error:", error);
@@ -56,15 +48,19 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
 
   const handleLikeTrack = async (track: Track) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const currentUser = JSON.parse(localStorage.getItem("fryda_current_user") || "null");
+      if (!currentUser) return;
 
-      await supabase.from("music_preferences").upsert({
-        user_id: user.id,
+      const preferences = JSON.parse(localStorage.getItem("fryda_preferences") || "[]");
+      preferences.push({
+        id: Date.now().toString(),
+        user_id: currentUser.id,
         track_name: track.track_name,
         artist: track.artist,
         liked: true,
+        created_at: new Date().toISOString(),
       });
+      localStorage.setItem("fryda_preferences", JSON.stringify(preferences));
 
       toast.success("Guardado en tus favoritos");
     } catch (error) {
