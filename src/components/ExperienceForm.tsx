@@ -125,39 +125,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
       experiences.push(experience);
       localStorage.setItem("fryda_experiences", JSON.stringify(experiences));
 
-      // Generar playlist basada en mood y tags
-      let candidateTracks = TRACK_CATALOG.filter(t => t.moods.includes(selectedMood));
-      
-      // Garantizar que cada tag tenga al menos 1 canción
-      const guaranteedTracks: typeof TRACK_CATALOG = [];
-      selectedTags.forEach(tag => {
-        if (tag.type === 'artist') {
-          const artistTrack = TRACK_CATALOG.find(t => 
-            t.artist === tag.value && !guaranteedTracks.find(gt => gt.id === t.id)
-          );
-          if (artistTrack) guaranteedTracks.push(artistTrack);
-        } else {
-          const songTrack = TRACK_CATALOG.find(t => t.id === tag.value);
-          if (songTrack && !guaranteedTracks.find(gt => gt.id === songTrack.id)) {
-            guaranteedTracks.push(songTrack);
-          }
-        }
-      });
-
-      // Priorizar canciones de artistas seleccionados (música conocida)
-      const artistTags = selectedTags.filter(t => t.type === 'artist').map(t => t.value);
-      const priorityTracks = candidateTracks.filter(t => 
-        artistTags.includes(t.artist) && !guaranteedTracks.find(gt => gt.id === t.id)
-      );
-
-      // Música nueva (del mood pero no de artistas seleccionados)
-      const newMusicTracks = candidateTracks.filter(t => 
-        !artistTags.includes(t.artist) &&
-        !guaranteedTracks.find(gt => gt.id === t.id) && 
-        !priorityTracks.find(pt => pt.id === t.id)
-      );
-
-      // Shuffle y combinar para llegar a mínimo 20 canciones
+      // Shuffle helper
       const shuffleArray = <T,>(array: T[]): T[] => {
         const shuffled = [...array];
         for (let i = shuffled.length - 1; i > 0; i--) {
@@ -167,19 +135,65 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         return shuffled;
       };
 
-      // Calcular cantidad de música nueva vs conocida basado en el slider
-      const percentage = newMusicPercentage[0] / 100;
+      // Identificar canciones conocidas (de artistas o canciones ingresadas por el usuario)
+      const knownSongs = TRACK_CATALOG.filter(track => 
+        selectedTags.some(tag => {
+          if (tag.type === 'artist') {
+            return track.artist.toLowerCase() === tag.value.toLowerCase();
+          } else {
+            return track.id === tag.value || track.track_name.toLowerCase().includes(tag.label.toLowerCase());
+          }
+        })
+      );
+
+      // Identificar música nueva del mismo mood (excluyendo las conocidas)
+      const newSongs = TRACK_CATALOG.filter(track => 
+        track.moods.includes(selectedMood) && 
+        !knownSongs.some(known => known.id === track.id)
+      );
+
+      // Calcular cantidad de canciones según el porcentaje del slider
+      const percentage = newMusicPercentage[0];
       const targetSize = 25;
-      const knownMusicSize = Math.round(targetSize * (1 - percentage));
-      const newMusicSize = targetSize - knownMusicSize;
+      let countKnown = 0;
+      let countNew = 0;
 
-      const playlistTracks = [
-        ...guaranteedTracks,
-        ...shuffleArray(priorityTracks).slice(0, Math.max(0, knownMusicSize - guaranteedTracks.length)),
-        ...shuffleArray(newMusicTracks).slice(0, newMusicSize),
-      ].slice(0, targetSize);
+      if (percentage === 0) {
+        // 0%: Solo canciones conocidas
+        countKnown = targetSize;
+        countNew = 0;
+      } else if (percentage === 100) {
+        // 100%: Solo música nueva
+        countKnown = 0;
+        countNew = targetSize;
+      } else if (percentage <= 49) {
+        // 1-49%: Mayoría conocidas (70-90%)
+        const knownRatio = 0.9 - (percentage / 49) * 0.2; // 0.9 a 0.7
+        countKnown = Math.round(targetSize * knownRatio);
+        countNew = targetSize - countKnown;
+      } else {
+        // 50-99%: De 50/50 a casi todas nuevas
+        const ratio = percentage / 100;
+        countKnown = Math.round(targetSize * (1 - ratio));
+        countNew = targetSize - countKnown;
+      }
 
-      // Si no llegamos a 20, completar con canciones aleatorias del catálogo
+      // Seleccionar canciones
+      const selectedKnown = shuffleArray(knownSongs).slice(0, countKnown);
+      const selectedNew = shuffleArray(newSongs).slice(0, countNew);
+      
+      let playlistTracks = [...selectedKnown, ...selectedNew];
+
+      // Si no llegamos a 20 canciones, completar con canciones aleatorias del mood
+      if (playlistTracks.length < 20) {
+        const allMoodTracks = TRACK_CATALOG.filter(t => 
+          t.moods.includes(selectedMood) && 
+          !playlistTracks.find(pt => pt.id === t.id)
+        );
+        playlistTracks.push(...shuffleArray(allMoodTracks).slice(0, 20 - playlistTracks.length));
+      }
+
+      // Si aún no llegamos a 20, usar todo el catálogo
       if (playlistTracks.length < 20) {
         const allRemaining = TRACK_CATALOG.filter(t => 
           !playlistTracks.find(pt => pt.id === t.id)
@@ -187,12 +201,16 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         playlistTracks.push(...shuffleArray(allRemaining).slice(0, 20 - playlistTracks.length));
       }
 
+      // Shuffle final para mezclar conocidas y nuevas
+      playlistTracks = shuffleArray(playlistTracks).slice(0, targetSize);
+
       const mockTracks = playlistTracks.map(t => ({
         track_name: t.track_name,
         artist: t.artist,
         album: t.album,
         album_cover: t.album_cover,
-        is_new_discovery: t.is_new_discovery || Math.random() > 0.6,
+        is_new_discovery: !knownSongs.some(known => known.id === t.id),
+        youtubeId: t.youtubeId || '',
       }));
 
       const playlistId = Date.now().toString();

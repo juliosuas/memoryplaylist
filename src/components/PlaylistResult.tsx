@@ -89,13 +89,13 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
         .filter(Boolean);
       
       if (videoIds.length === 0) {
-        toast.error('No hay IDs de YouTube disponibles para esta playlist');
+        toast.error('No hay videos disponibles para esta playlist.');
         return;
       }
       
       const url = `https://www.youtube.com/watch_videos?video_ids=${videoIds.join(",")}`;
       window.open(url, "_blank");
-      toast.success('Abriendo playlist en YouTube');
+      toast.success('¡Playlist abierta en YouTube!');
     } else {
       // Para Spotify y Apple Music: abrir múltiples pestañas
       tracks.forEach(track => {
