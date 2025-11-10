@@ -82,21 +82,34 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
   };
 
   const openAllInService = (service: 'spotify' | 'apple' | 'youtube') => {
-    // Crear un string concatenado de todas las canciones
-    const allTracksQuery = tracks.map(track => `${track.track_name} ${track.artist}`).join(', ');
-    const encodedQuery = encodeURIComponent(allTracksQuery);
-    
-    let url = '';
-    if (service === 'spotify') {
-      url = `https://open.spotify.com/search/${encodedQuery}`;
-    } else if (service === 'apple') {
-      url = `https://music.apple.com/search?term=${encodedQuery}`;
-    } else if (service === 'youtube') {
-      url = `https://www.youtube.com/results?search_query=${encodedQuery}`;
+    if (service === 'youtube') {
+      // Para YouTube: usar youtubeId para crear una playlist real
+      const videoIds = tracks
+        .map(track => (track as any).youtubeId)
+        .filter(Boolean);
+      
+      if (videoIds.length === 0) {
+        toast.error('No hay IDs de YouTube disponibles para esta playlist');
+        return;
+      }
+      
+      const url = `https://www.youtube.com/watch_videos?video_ids=${videoIds.join(",")}`;
+      window.open(url, "_blank");
+      toast.success('Abriendo playlist en YouTube');
+    } else {
+      // Para Spotify y Apple Music: abrir múltiples pestañas
+      tracks.forEach(track => {
+        const q = encodeURIComponent(`${track.track_name} ${track.artist}`);
+        let url = '';
+        if (service === 'spotify') {
+          url = `https://open.spotify.com/search/${q}`;
+        } else if (service === 'apple') {
+          url = `https://music.apple.com/search?term=${q}`;
+        }
+        window.open(url, "_blank");
+      });
+      toast.success(`Abriendo ${tracks.length} canciones en ${service === 'spotify' ? 'Spotify' : 'Apple Music'}`);
     }
-    
-    window.open(url, '_blank');
-    toast.success(`Abriendo playlist completa en ${service === 'spotify' ? 'Spotify' : service === 'apple' ? 'Apple Music' : 'YouTube'}`);
   };
 
   if (loading) {
