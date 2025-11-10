@@ -7,30 +7,45 @@ import { Upload, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { TRACK_CATALOG, ARTISTS, SONGS } from "@/data/tracks";
 import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
 
 interface ExperienceFormProps {
   onPlaylistGenerated: (playlistId: string) => void;
 }
 
 const MOODS = [
+  { id: "enamorado", label: "Enamorado(a)", emoji: "❤️" },
+  { id: "nostálgico", label: "Nostálgico(a)", emoji: "🥲" },
   { id: "feliz", label: "Feliz", emoji: "😀" },
-  { id: "nostálgico", label: "Nostálgico", emoji: "🥲" },
-  { id: "chill", label: "Chill / Relajado", emoji: "😌" },
+  { id: "relajado", label: "Relajado(a)", emoji: "😌" },
+  { id: "nervioso", label: "Nervioso(a)", emoji: "😬" },
   { id: "triste", label: "Triste", emoji: "😢" },
-  { id: "energético", label: "Energético", emoji: "⚡" },
-  { id: "enamorado", label: "Enamorado", emoji: "❤️" },
-  { id: "nervioso", label: "Nervioso", emoji: "😬" },
-  { id: "melancólico", label: "Melancólico", emoji: "🌧️" },
-  { id: "motivado", label: "Motivado / Enfocado", emoji: "💪" },
+  { id: "reflexivo", label: "Reflexivo(a)", emoji: "💭" },
+  { id: "motivado", label: "Motivado(a)", emoji: "💪" },
+  { id: "esperanzado", label: "Esperanzado(a)", emoji: "🌈" },
+  { id: "libre", label: "Libre / Aventurero(a)", emoji: "😎" },
+];
+
+const MOMENT_TYPES = [
+  { id: "vacaciones", label: "Vacaciones o viaje", emoji: "🏖️" },
+  { id: "fiesta", label: "Fiesta o celebración", emoji: "💃" },
+  { id: "tranquilo", label: "Día tranquilo", emoji: "🏡" },
+  { id: "despedida", label: "Despedida o cierre", emoji: "💔" },
+  { id: "concierto", label: "Concierto o música en vivo", emoji: "🎶" },
+  { id: "noche", label: "Noche especial", emoji: "🌃" },
+  { id: "inspiracion", label: "Inspiración o creación", emoji: "💡" },
+  { id: "evento", label: "Sesión de fotos o evento", emoji: "📸" },
 ];
 
 export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => {
   const [selectedMood, setSelectedMood] = useState<string>("");
+  const [selectedMomentType, setSelectedMomentType] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<Array<{ type: 'artist' | 'song'; value: string; label: string }>>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string>("");
+  const [newMusicPercentage, setNewMusicPercentage] = useState<number[]>([50]);
   const [loading, setLoading] = useState(false);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,7 +92,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMood) {
-      toast.error("Por favor selecciona un estado de ánimo");
+      toast.error("Por favor selecciona cómo te sentiste en ese momento");
       return;
     }
 
@@ -99,8 +114,10 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
       const experience = {
         id: experienceId,
         mood: selectedMood,
+        moment_type: selectedMomentType,
         tags: selectedTags,
         photo_url: photoUrl,
+        new_music_percentage: newMusicPercentage[0],
         created_at: new Date().toISOString(),
       };
 
@@ -127,14 +144,15 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         }
       });
 
-      // Priorizar canciones de artistas seleccionados
+      // Priorizar canciones de artistas seleccionados (música conocida)
       const artistTags = selectedTags.filter(t => t.type === 'artist').map(t => t.value);
       const priorityTracks = candidateTracks.filter(t => 
         artistTags.includes(t.artist) && !guaranteedTracks.find(gt => gt.id === t.id)
       );
 
-      // Completar con canciones del mood
-      const remainingTracks = candidateTracks.filter(t => 
+      // Música nueva (del mood pero no de artistas seleccionados)
+      const newMusicTracks = candidateTracks.filter(t => 
+        !artistTags.includes(t.artist) &&
         !guaranteedTracks.find(gt => gt.id === t.id) && 
         !priorityTracks.find(pt => pt.id === t.id)
       );
@@ -149,11 +167,17 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         return shuffled;
       };
 
+      // Calcular cantidad de música nueva vs conocida basado en el slider
+      const percentage = newMusicPercentage[0] / 100;
+      const targetSize = 25;
+      const knownMusicSize = Math.round(targetSize * (1 - percentage));
+      const newMusicSize = targetSize - knownMusicSize;
+
       const playlistTracks = [
         ...guaranteedTracks,
-        ...shuffleArray(priorityTracks).slice(0, 10),
-        ...shuffleArray(remainingTracks),
-      ].slice(0, 25); // Máximo 25 canciones
+        ...shuffleArray(priorityTracks).slice(0, Math.max(0, knownMusicSize - guaranteedTracks.length)),
+        ...shuffleArray(newMusicTracks).slice(0, newMusicSize),
+      ].slice(0, targetSize);
 
       // Si no llegamos a 20, completar con canciones aleatorias del catálogo
       if (playlistTracks.length < 20) {
@@ -201,10 +225,12 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
 
       // Reset form
       setSelectedMood("");
+      setSelectedMomentType("");
       setSelectedTags([]);
       setSearchQuery("");
       setPhoto(null);
       setPhotoPreview("");
+      setNewMusicPercentage([50]);
     } catch (error: any) {
       console.error("Error:", error);
       toast.error(error.message || "Error al generar playlist");
@@ -225,34 +251,14 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
 
       <div className="space-y-2">
         <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-          Crea tu Playlist
+          Revive tu Memoria
         </h2>
         <p className="text-muted-foreground">
-          Elige tu estado de ánimo y añade artistas o canciones para personalizar tu experiencia musical.
+          Recuerda ese momento especial y crea una playlist que capture su esencia.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Selección de Mood */}
-        <div className="space-y-3">
-          <Label className="text-foreground text-lg">¿Cómo te sientes?</Label>
-          <div className="grid grid-cols-3 gap-2">
-            {MOODS.map((mood) => (
-              <Button
-                key={mood.id}
-                type="button"
-                variant={selectedMood === mood.id ? "default" : "outline"}
-                className={`h-auto py-3 flex flex-col items-center gap-1 ${
-                  selectedMood === mood.id ? "ring-2 ring-primary" : ""
-                }`}
-                onClick={() => setSelectedMood(mood.id)}
-              >
-                <span className="text-2xl">{mood.emoji}</span>
-                <span className="text-xs">{mood.label}</span>
-              </Button>
-            ))}
-          </div>
-        </div>
         {/* Upload de foto */}
         <div className="space-y-2">
           <Label htmlFor="photo" className="text-foreground">Foto (opcional)</Label>
@@ -296,12 +302,54 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
           </div>
         </div>
 
+        {/* Selección de Mood */}
+        <div className="space-y-3">
+          <Label className="text-foreground text-lg">¿Cómo te sentiste en ese momento?</Label>
+          <div className="grid grid-cols-3 gap-2">
+            {MOODS.map((mood) => (
+              <Button
+                key={mood.id}
+                type="button"
+                variant={selectedMood === mood.id ? "default" : "outline"}
+                className={`h-auto py-3 flex flex-col items-center gap-1 ${
+                  selectedMood === mood.id ? "ring-2 ring-primary" : ""
+                }`}
+                onClick={() => setSelectedMood(mood.id)}
+              >
+                <span className="text-2xl">{mood.emoji}</span>
+                <span className="text-xs">{mood.label}</span>
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {/* Selección de tipo de momento */}
+        <div className="space-y-3">
+          <Label className="text-foreground text-lg">¿Qué tipo de momento fue?</Label>
+          <div className="grid grid-cols-2 gap-2">
+            {MOMENT_TYPES.map((type) => (
+              <Button
+                key={type.id}
+                type="button"
+                variant={selectedMomentType === type.id ? "default" : "outline"}
+                className={`h-auto py-3 flex flex-col items-center gap-1 ${
+                  selectedMomentType === type.id ? "ring-2 ring-primary" : ""
+                }`}
+                onClick={() => setSelectedMomentType(type.id)}
+              >
+                <span className="text-2xl">{type.emoji}</span>
+                <span className="text-xs text-center">{type.label}</span>
+              </Button>
+            ))}
+          </div>
+        </div>
+
         {/* Autocompletar de artistas/canciones */}
         <div className="space-y-3">
-          <Label className="text-foreground">Artistas o canciones (opcional)</Label>
+          <Label className="text-foreground">Artistas o canciones que recuerdes</Label>
           <div className="relative">
             <Input
-              placeholder="Busca un artista o canción..."
+              placeholder="Agrega artistas o canciones que recuerdes de ese momento..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -345,6 +393,27 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
           <p className="text-xs text-muted-foreground italic">
             Cada artista o canción que agregues estará representado en tu playlist final.
           </p>
+        </div>
+
+        {/* Slider de música nueva */}
+        <div className="space-y-3">
+          <Label className="text-foreground text-lg">
+            ¿Qué porcentaje de música nueva te gustaría descubrir?
+          </Label>
+          <div className="space-y-2">
+            <Slider
+              value={newMusicPercentage}
+              onValueChange={setNewMusicPercentage}
+              max={100}
+              step={10}
+              className="w-full"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>Conocida</span>
+              <span className="font-semibold text-foreground">{newMusicPercentage[0]}% nueva</span>
+              <span>Nueva</span>
+            </div>
+          </div>
         </div>
 
         <Button
