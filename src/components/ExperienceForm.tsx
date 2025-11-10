@@ -1,22 +1,36 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Slider } from "@/components/ui/slider";
-import { Upload, Sparkles } from "lucide-react";
+import { Upload, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
+import { TRACK_CATALOG, ARTISTS, SONGS } from "@/data/tracks";
+import { Badge } from "@/components/ui/badge";
 
 interface ExperienceFormProps {
   onPlaylistGenerated: (playlistId: string) => void;
 }
 
+const MOODS = [
+  { id: "feliz", label: "Feliz", emoji: "😀" },
+  { id: "nostálgico", label: "Nostálgico", emoji: "🥲" },
+  { id: "chill", label: "Chill / Relajado", emoji: "😌" },
+  { id: "triste", label: "Triste", emoji: "😢" },
+  { id: "energético", label: "Energético", emoji: "⚡" },
+  { id: "enamorado", label: "Enamorado", emoji: "❤️" },
+  { id: "nervioso", label: "Nervioso", emoji: "😬" },
+  { id: "melancólico", label: "Melancólico", emoji: "🌧️" },
+  { id: "motivado", label: "Motivado / Enfocado", emoji: "💪" },
+];
+
 export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => {
-  const [description, setDescription] = useState("");
-  const [musicListened, setMusicListened] = useState("");
+  const [selectedMood, setSelectedMood] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTags, setSelectedTags] = useState<Array<{ type: 'artist' | 'song'; value: string; label: string }>>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string>("");
-  const [discoveryPercentage, setDiscoveryPercentage] = useState([50]);
   const [loading, setLoading] = useState(false);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -31,10 +45,39 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
     }
   };
 
+  const addTag = (type: 'artist' | 'song', value: string, label: string) => {
+    if (!selectedTags.find(t => t.value === value)) {
+      setSelectedTags([...selectedTags, { type, value, label }]);
+    }
+    setSearchQuery("");
+    setShowSuggestions(false);
+  };
+
+  const removeTag = (value: string) => {
+    setSelectedTags(selectedTags.filter(t => t.value !== value));
+  };
+
+  const getSuggestions = () => {
+    if (!searchQuery.trim()) return [];
+    
+    const query = searchQuery.toLowerCase();
+    const artistMatches = ARTISTS
+      .filter(artist => artist.toLowerCase().includes(query))
+      .slice(0, 5)
+      .map(artist => ({ type: 'artist' as const, value: artist, label: artist }));
+    
+    const songMatches = SONGS
+      .filter(song => song.label.toLowerCase().includes(query))
+      .slice(0, 5)
+      .map(song => ({ type: 'song' as const, value: song.value, label: song.label }));
+    
+    return [...artistMatches, ...songMatches].slice(0, 8);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!description.trim()) {
-      toast.error("Por favor describe tu experiencia");
+    if (!selectedMood) {
+      toast.error("Por favor selecciona un estado de ánimo");
       return;
     }
 
@@ -55,7 +98,8 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
       const experienceId = Date.now().toString();
       const experience = {
         id: experienceId,
-        description,
+        mood: selectedMood,
+        tags: selectedTags,
         photo_url: photoUrl,
         created_at: new Date().toISOString(),
       };
@@ -64,107 +108,75 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
       experiences.push(experience);
       localStorage.setItem("fryda_experiences", JSON.stringify(experiences));
 
-      // Mock análisis emocional
-      const emotions = ["feliz", "nostálgico", "energético", "melancólico", "tranquilo", "romántico", "motivado"];
-      const detectedEmotion = emotions[Math.floor(Math.random() * emotions.length)];
-
-      // Catálogo de canciones por género/artista
-      const musicCatalog: Record<string, Array<{track_name: string, artist: string, album: string, is_new_discovery: boolean}>> = {
-        "rock": [
-          { track_name: "Do I Wanna Know?", artist: "Arctic Monkeys", album: "AM", is_new_discovery: false },
-          { track_name: "R U Mine?", artist: "Arctic Monkeys", album: "AM", is_new_discovery: true },
-          { track_name: "Bohemian Rhapsody", artist: "Queen", album: "A Night at the Opera", is_new_discovery: false },
-          { track_name: "Don't Stop Me Now", artist: "Queen", album: "Jazz", is_new_discovery: true },
-        ],
-        "jazz": [
-          { track_name: "Take Five", artist: "Dave Brubeck", album: "Time Out", is_new_discovery: false },
-          { track_name: "So What", artist: "Miles Davis", album: "Kind of Blue", is_new_discovery: true },
-          { track_name: "Autumn Leaves", artist: "Bill Evans", album: "Portrait in Jazz", is_new_discovery: false },
-          { track_name: "My Funny Valentine", artist: "Chet Baker", album: "Chet Baker Sings", is_new_discovery: true },
-        ],
-        "lofi": [
-          { track_name: "We'll Be Fine", artist: "Jinsang", album: "Solitude", is_new_discovery: false },
-          { track_name: "Affection", artist: "Jinsang", album: "Life", is_new_discovery: true },
-          { track_name: "Coffee", artist: "Idealism", album: "Rainy Evening", is_new_discovery: false },
-          { track_name: "Apartment", artist: "Tusken", album: "Dreams", is_new_discovery: true },
-        ],
-        "pop": [
-          { track_name: "Happy", artist: "Pharrell Williams", album: "G I R L", is_new_discovery: false },
-          { track_name: "Shake It Off", artist: "Taylor Swift", album: "1989", is_new_discovery: true },
-          { track_name: "Uptown Funk", artist: "Bruno Mars", album: "Uptown Special", is_new_discovery: false },
-          { track_name: "Levitating", artist: "Dua Lipa", album: "Future Nostalgia", is_new_discovery: true },
-        ],
-        "indie": [
-          { track_name: "Electric Feel", artist: "MGMT", album: "Oracular Spectacular", is_new_discovery: false },
-          { track_name: "Fluorescent Adolescent", artist: "Arctic Monkeys", album: "Favourite Worst Nightmare", is_new_discovery: true },
-          { track_name: "Somebody Else", artist: "The 1975", album: "I Like It When You Sleep", is_new_discovery: false },
-          { track_name: "Heat Waves", artist: "Glass Animals", album: "Dreamland", is_new_discovery: true },
-        ],
-        "classic": [
-          { track_name: "Here Comes The Sun", artist: "The Beatles", album: "Abbey Road", is_new_discovery: false },
-          { track_name: "Let It Be", artist: "The Beatles", album: "Let It Be", is_new_discovery: true },
-          { track_name: "Good Vibrations", artist: "The Beach Boys", album: "Smiley Smile", is_new_discovery: false },
-          { track_name: "Hotel California", artist: "Eagles", album: "Hotel California", is_new_discovery: true },
-        ],
-      };
-
-      // Función para seleccionar canciones basadas en la música escuchada
-      const selectTracksBasedOnMusic = (musicText: string): Array<{track_name: string, artist: string, album: string, is_new_discovery: boolean}> => {
-        const lowerText = musicText.toLowerCase();
-        let selectedTracks: Array<{track_name: string, artist: string, album: string, is_new_discovery: boolean}> = [];
-        
-        // Buscar coincidencias con géneros
-        Object.keys(musicCatalog).forEach(genre => {
-          if (lowerText.includes(genre)) {
-            selectedTracks.push(...musicCatalog[genre]);
+      // Generar playlist basada en mood y tags
+      let candidateTracks = TRACK_CATALOG.filter(t => t.moods.includes(selectedMood));
+      
+      // Garantizar que cada tag tenga al menos 1 canción
+      const guaranteedTracks: typeof TRACK_CATALOG = [];
+      selectedTags.forEach(tag => {
+        if (tag.type === 'artist') {
+          const artistTrack = TRACK_CATALOG.find(t => 
+            t.artist === tag.value && !guaranteedTracks.find(gt => gt.id === t.id)
+          );
+          if (artistTrack) guaranteedTracks.push(artistTrack);
+        } else {
+          const songTrack = TRACK_CATALOG.find(t => t.id === tag.value);
+          if (songTrack && !guaranteedTracks.find(gt => gt.id === songTrack.id)) {
+            guaranteedTracks.push(songTrack);
           }
-        });
+        }
+      });
 
-        // Buscar coincidencias con artistas específicos
-        if (lowerText.includes("arctic monkeys") || lowerText.includes("arctic")) {
-          selectedTracks.push(...musicCatalog["indie"].filter(t => t.artist.includes("Arctic Monkeys")));
-        }
-        if (lowerText.includes("beatles")) {
-          selectedTracks.push(...musicCatalog["classic"].filter(t => t.artist.includes("Beatles")));
-        }
-        if (lowerText.includes("queen")) {
-          selectedTracks.push(...musicCatalog["rock"].filter(t => t.artist.includes("Queen")));
-        }
+      // Priorizar canciones de artistas seleccionados
+      const artistTags = selectedTags.filter(t => t.type === 'artist').map(t => t.value);
+      const priorityTracks = candidateTracks.filter(t => 
+        artistTags.includes(t.artist) && !guaranteedTracks.find(gt => gt.id === t.id)
+      );
 
-        // Si no hay coincidencias, usar canciones por defecto
-        if (selectedTracks.length === 0) {
-          selectedTracks = [
-            { track_name: "Here Comes The Sun", artist: "The Beatles", album: "Abbey Road", is_new_discovery: false },
-            { track_name: "Don't Stop Me Now", artist: "Queen", album: "Jazz", is_new_discovery: true },
-            { track_name: "Good Vibrations", artist: "The Beach Boys", album: "Smiley Smile", is_new_discovery: false },
-            { track_name: "Walking On Sunshine", artist: "Katrina & The Waves", album: "Walking on Sunshine", is_new_discovery: true },
-            { track_name: "Happy", artist: "Pharrell Williams", album: "G I R L", is_new_discovery: false },
-          ];
-        }
+      // Completar con canciones del mood
+      const remainingTracks = candidateTracks.filter(t => 
+        !guaranteedTracks.find(gt => gt.id === t.id) && 
+        !priorityTracks.find(pt => pt.id === t.id)
+      );
 
-        // Limitar a 5 canciones únicas
-        const uniqueTracks = Array.from(new Map(selectedTracks.map(t => [t.track_name, t])).values());
-        return uniqueTracks.slice(0, 5);
+      // Shuffle y combinar para llegar a mínimo 20 canciones
+      const shuffleArray = <T,>(array: T[]): T[] => {
+        const shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
       };
 
-      // Seleccionar canciones basadas en la música escuchada
-      const mockTracks = musicListened.trim() 
-        ? selectTracksBasedOnMusic(musicListened)
-        : [
-            { track_name: "Here Comes The Sun", artist: "The Beatles", album: "Abbey Road", is_new_discovery: false },
-            { track_name: "Don't Stop Me Now", artist: "Queen", album: "Jazz", is_new_discovery: true },
-            { track_name: "Good Vibrations", artist: "The Beach Boys", album: "Smiley Smile", is_new_discovery: false },
-            { track_name: "Walking On Sunshine", artist: "Katrina & The Waves", album: "Walking on Sunshine", is_new_discovery: true },
-            { track_name: "Happy", artist: "Pharrell Williams", album: "G I R L", is_new_discovery: false },
-          ];
+      const playlistTracks = [
+        ...guaranteedTracks,
+        ...shuffleArray(priorityTracks).slice(0, 10),
+        ...shuffleArray(remainingTracks),
+      ].slice(0, 25); // Máximo 25 canciones
+
+      // Si no llegamos a 20, completar con canciones aleatorias del catálogo
+      if (playlistTracks.length < 20) {
+        const allRemaining = TRACK_CATALOG.filter(t => 
+          !playlistTracks.find(pt => pt.id === t.id)
+        );
+        playlistTracks.push(...shuffleArray(allRemaining).slice(0, 20 - playlistTracks.length));
+      }
+
+      const mockTracks = playlistTracks.map(t => ({
+        track_name: t.track_name,
+        artist: t.artist,
+        album: t.album,
+        album_cover: t.album_cover,
+        is_new_discovery: t.is_new_discovery || Math.random() > 0.6,
+      }));
 
       const playlistId = Date.now().toString();
       const playlist = {
         id: playlistId,
         experience_id: experienceId,
-        name: `Playlist ${detectedEmotion}`,
-        emotion: detectedEmotion,
-        discovery_percentage: discoveryPercentage[0],
+        name: `Playlist ${selectedMood}`,
+        emotion: selectedMood,
         created_at: new Date().toISOString(),
       };
 
@@ -184,15 +196,15 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
       allTracks.push(...tracks);
       localStorage.setItem("fryda_tracks", JSON.stringify(allTracks));
 
-      toast.success(`¡Playlist generada! Emoción: ${detectedEmotion}`);
+      toast.success(`¡Playlist generada! Emoción: ${selectedMood}`);
       onPlaylistGenerated(playlistId);
 
       // Reset form
-      setDescription("");
-      setMusicListened("");
+      setSelectedMood("");
+      setSelectedTags([]);
+      setSearchQuery("");
       setPhoto(null);
       setPhotoPreview("");
-      setDiscoveryPercentage([50]);
     } catch (error: any) {
       console.error("Error:", error);
       toast.error(error.message || "Error al generar playlist");
@@ -213,14 +225,34 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
 
       <div className="space-y-2">
         <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-          Comparte tu Momento
+          Crea tu Playlist
         </h2>
         <p className="text-muted-foreground">
-          Describe lo que sientes, los olores, las sensaciones... Nosotros crearemos la banda sonora perfecta.
+          Elige tu estado de ánimo y añade artistas o canciones para personalizar tu experiencia musical.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Selección de Mood */}
+        <div className="space-y-3">
+          <Label className="text-foreground text-lg">¿Cómo te sientes?</Label>
+          <div className="grid grid-cols-3 gap-2">
+            {MOODS.map((mood) => (
+              <Button
+                key={mood.id}
+                type="button"
+                variant={selectedMood === mood.id ? "default" : "outline"}
+                className={`h-auto py-3 flex flex-col items-center gap-1 ${
+                  selectedMood === mood.id ? "ring-2 ring-primary" : ""
+                }`}
+                onClick={() => setSelectedMood(mood.id)}
+              >
+                <span className="text-2xl">{mood.emoji}</span>
+                <span className="text-xs">{mood.label}</span>
+              </Button>
+            ))}
+          </div>
+        </div>
         {/* Upload de foto */}
         <div className="space-y-2">
           <Label htmlFor="photo" className="text-foreground">Foto (opcional)</Label>
@@ -264,59 +296,54 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
           </div>
         </div>
 
-        {/* Descripción */}
-        <div className="space-y-2">
-          <Label htmlFor="description" className="text-foreground">
-            Describe tu experiencia
-          </Label>
-          <Textarea
-            id="description"
-            placeholder="Estoy en la playa al atardecer, siento la brisa salada, el aroma del mar... me siento nostálgico pero en paz..."
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={5}
-            className="resize-none border-input focus:ring-primary"
-            required
-          />
-        </div>
-
-        {/* Música escuchada */}
-        <div className="space-y-2">
-          <Label htmlFor="musicListened" className="text-foreground">
-            ¿Qué canciones, artistas o géneros escuchaste durante este momento?
-          </Label>
-          <Textarea
-            id="musicListened"
-            placeholder="Ejemplo: Arctic Monkeys, jazz suave, playlist de lo-fi, etc."
-            value={musicListened}
-            onChange={(e) => setMusicListened(e.target.value)}
-            rows={3}
-            className="resize-none border-input focus:ring-primary"
-          />
-          <p className="text-xs text-muted-foreground italic">
-            Entre más detalles des de la música que escuchaste ese día o en esa experiencia, mejor podrá Fryda ajustar la playlist a tu recuerdo.
-          </p>
-        </div>
-
-        {/* Slider de descubrimiento */}
+        {/* Autocompletar de artistas/canciones */}
         <div className="space-y-3">
-          <div className="flex justify-between items-center">
-            <Label className="text-foreground">Descubrimiento</Label>
-            <span className="text-sm font-medium text-primary">{discoveryPercentage[0]}%</span>
+          <Label className="text-foreground">Artistas o canciones (opcional)</Label>
+          <div className="relative">
+            <Input
+              placeholder="Busca un artista o canción..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onFocus={() => setShowSuggestions(true)}
+              className="border-input focus:ring-primary"
+            />
+            {showSuggestions && searchQuery && getSuggestions().length > 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                {getSuggestions().map((suggestion, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    className="w-full text-left px-4 py-2 hover:bg-muted transition-colors flex items-center gap-2"
+                    onClick={() => addTag(suggestion.type, suggestion.value, suggestion.label)}
+                  >
+                    <Badge variant={suggestion.type === 'artist' ? 'default' : 'secondary'} className="text-xs">
+                      {suggestion.type === 'artist' ? '🎤' : '🎵'}
+                    </Badge>
+                    <span className="text-sm">{suggestion.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-          <Slider
-            value={discoveryPercentage}
-            onValueChange={setDiscoveryPercentage}
-            max={100}
-            step={10}
-            className="w-full"
-          />
-          <p className="text-xs text-muted-foreground">
-            {discoveryPercentage[0] < 30
-              ? "Más canciones familiares"
-              : discoveryPercentage[0] > 70
-              ? "Más canciones nuevas para descubrir"
-              : "Balance entre familiar y nuevo"}
+          <div className="flex flex-wrap gap-2">
+            {selectedTags.map((tag) => (
+              <Badge key={tag.value} variant="outline" className="gap-1 pr-1">
+                <span>{tag.type === 'artist' ? '🎤' : '🎵'} {tag.label}</span>
+                <button
+                  type="button"
+                  onClick={() => removeTag(tag.value)}
+                  className="ml-1 hover:text-destructive"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground italic">
+            Cada artista o canción que agregues estará representado en tu playlist final.
           </p>
         </div>
 

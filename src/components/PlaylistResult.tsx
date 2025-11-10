@@ -9,6 +9,7 @@ interface Track {
   track_name: string;
   artist: string;
   album: string | null;
+  album_cover?: string;
   is_new_discovery: boolean;
 }
 
@@ -172,11 +173,18 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
                 key={track.id}
                 className="p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors group space-y-3"
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-4 flex-1 min-w-0">
-                    <span className="text-sm font-mono text-muted-foreground w-6">
+                    <span className="text-sm font-mono text-muted-foreground w-6 flex-shrink-0">
                       {String(index + 1).padStart(2, "0")}
                     </span>
+                    {track.album_cover && (
+                      <img 
+                        src={track.album_cover} 
+                        alt={track.album || "Album cover"}
+                        className="w-12 h-12 rounded object-cover flex-shrink-0"
+                      />
+                    )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <h4 className="font-medium truncate">{track.track_name}</h4>
@@ -185,6 +193,9 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground truncate">{track.artist}</p>
+                      {track.album && (
+                        <p className="text-xs text-muted-foreground/70 truncate">{track.album}</p>
+                      )}
                     </div>
                   </div>
                   <Button
