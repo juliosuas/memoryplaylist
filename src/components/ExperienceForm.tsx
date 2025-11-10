@@ -39,9 +39,6 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
 
     setLoading(true);
     try {
-      const currentUser = JSON.parse(localStorage.getItem("fryda_current_user") || "null");
-      if (!currentUser) throw new Error("Usuario no autenticado");
-
       let photoUrl = null;
 
       // Convertir foto a base64 si existe
@@ -57,7 +54,6 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
       const experienceId = Date.now().toString();
       const experience = {
         id: experienceId,
-        user_id: currentUser.id,
         description,
         photo_url: photoUrl,
         created_at: new Date().toISOString(),
@@ -83,7 +79,6 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
       const playlistId = Date.now().toString();
       const playlist = {
         id: playlistId,
-        user_id: currentUser.id,
         experience_id: experienceId,
         name: `Playlist ${detectedEmotion}`,
         emotion: detectedEmotion,

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Music, Heart, Sparkles, ArrowLeft } from "lucide-react";
+import { Music, Heart, Sparkles, ArrowLeft, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 interface Track {
@@ -48,13 +48,9 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
 
   const handleLikeTrack = async (track: Track) => {
     try {
-      const currentUser = JSON.parse(localStorage.getItem("fryda_current_user") || "null");
-      if (!currentUser) return;
-
       const preferences = JSON.parse(localStorage.getItem("fryda_preferences") || "[]");
       preferences.push({
         id: Date.now().toString(),
-        user_id: currentUser.id,
         track_name: track.track_name,
         artist: track.artist,
         liked: true,
@@ -67,6 +63,32 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
       console.error("Error:", error);
       toast.error("Error al guardar favorito");
     }
+  };
+
+  const openInSpotify = (trackName: string, artist: string) => {
+    const query = encodeURIComponent(`${trackName} ${artist}`);
+    window.open(`https://open.spotify.com/search/${query}`, '_blank');
+  };
+
+  const openInAppleMusic = (trackName: string, artist: string) => {
+    const query = encodeURIComponent(`${trackName} ${artist}`);
+    window.open(`https://music.apple.com/search?term=${query}`, '_blank');
+  };
+
+  const openInYouTube = (trackName: string, artist: string) => {
+    const query = encodeURIComponent(`${trackName} ${artist}`);
+    window.open(`https://www.youtube.com/results?search_query=${query}`, '_blank');
+  };
+
+  const openAllInService = (service: 'spotify' | 'apple' | 'youtube') => {
+    tracks.forEach((track, index) => {
+      setTimeout(() => {
+        if (service === 'spotify') openInSpotify(track.track_name, track.artist);
+        if (service === 'apple') openInAppleMusic(track.track_name, track.artist);
+        if (service === 'youtube') openInYouTube(track.track_name, track.artist);
+      }, index * 500); // Delay to avoid popup blockers
+    });
+    toast.success(`Abriendo ${tracks.length} canciones en ${service === 'spotify' ? 'Spotify' : service === 'apple' ? 'Apple Music' : 'YouTube'}`);
   };
 
   if (loading) {
@@ -148,37 +170,101 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
             {tracks.map((track, index) => (
               <div
                 key={track.id}
-                className="flex items-center justify-between p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors group"
+                className="p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors group space-y-3"
               >
-                <div className="flex items-center gap-4 flex-1 min-w-0">
-                  <span className="text-sm font-mono text-muted-foreground w-6">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-medium truncate">{track.track_name}</h4>
-                      {track.is_new_discovery && (
-                        <Sparkles className="w-4 h-4 text-accent flex-shrink-0" />
-                      )}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <span className="text-sm font-mono text-muted-foreground w-6">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium truncate">{track.track_name}</h4>
+                        {track.is_new_discovery && (
+                          <Sparkles className="w-4 h-4 text-accent flex-shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground truncate">{track.artist}</p>
                     </div>
-                    <p className="text-sm text-muted-foreground truncate">{track.artist}</p>
                   </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => handleLikeTrack(track)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                  >
+                    <Heart className="w-4 h-4" />
+                  </Button>
                 </div>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => handleLikeTrack(track)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                >
-                  <Heart className="w-4 h-4" />
-                </Button>
+                
+                {/* Botones de exportación */}
+                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity pl-10">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openInSpotify(track.track_name, track.artist)}
+                    className="text-xs h-7"
+                  >
+                    <ExternalLink className="w-3 h-3 mr-1" />
+                    Spotify
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openInAppleMusic(track.track_name, track.artist)}
+                    className="text-xs h-7"
+                  >
+                    <ExternalLink className="w-3 h-3 mr-1" />
+                    Apple Music
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openInYouTube(track.track_name, track.artist)}
+                    className="text-xs h-7"
+                  >
+                    <ExternalLink className="w-3 h-3 mr-1" />
+                    YouTube
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
         </div>
 
         {/* Acciones */}
-        <div className="pt-4 border-t border-border">
+        <div className="pt-4 border-t border-border space-y-3">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-muted-foreground text-center mb-2">
+              Abrir playlist completa en:
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                onClick={() => openAllInService('spotify')}
+                variant="outline"
+                size="sm"
+              >
+                <Music className="w-3 h-3 mr-1" />
+                Spotify
+              </Button>
+              <Button
+                onClick={() => openAllInService('apple')}
+                variant="outline"
+                size="sm"
+              >
+                <Music className="w-3 h-3 mr-1" />
+                Apple Music
+              </Button>
+              <Button
+                onClick={() => openAllInService('youtube')}
+                variant="outline"
+                size="sm"
+              >
+                <Music className="w-3 h-3 mr-1" />
+                YouTube
+              </Button>
+            </div>
+          </div>
           <Button
             onClick={onBack}
             variant="outline"
