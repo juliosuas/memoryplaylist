@@ -82,14 +82,21 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
   };
 
   const openAllInService = (service: 'spotify' | 'apple' | 'youtube') => {
-    tracks.forEach((track, index) => {
-      setTimeout(() => {
-        if (service === 'spotify') openInSpotify(track.track_name, track.artist);
-        if (service === 'apple') openInAppleMusic(track.track_name, track.artist);
-        if (service === 'youtube') openInYouTube(track.track_name, track.artist);
-      }, index * 500); // Delay to avoid popup blockers
-    });
-    toast.success(`Abriendo ${tracks.length} canciones en ${service === 'spotify' ? 'Spotify' : service === 'apple' ? 'Apple Music' : 'YouTube'}`);
+    // Crear un string concatenado de todas las canciones
+    const allTracksQuery = tracks.map(track => `${track.track_name} ${track.artist}`).join(', ');
+    const encodedQuery = encodeURIComponent(allTracksQuery);
+    
+    let url = '';
+    if (service === 'spotify') {
+      url = `https://open.spotify.com/search/${encodedQuery}`;
+    } else if (service === 'apple') {
+      url = `https://music.apple.com/search?term=${encodedQuery}`;
+    } else if (service === 'youtube') {
+      url = `https://www.youtube.com/results?search_query=${encodedQuery}`;
+    }
+    
+    window.open(url, '_blank');
+    toast.success(`Abriendo playlist completa en ${service === 'spotify' ? 'Spotify' : service === 'apple' ? 'Apple Music' : 'YouTube'}`);
   };
 
   if (loading) {

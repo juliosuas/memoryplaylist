@@ -110,6 +110,122 @@ export const TRACK_CATALOG: TrackData[] = [
   // David Bowie
   { id: "db1", track_name: "Heroes", artist: "David Bowie", album: "Heroes", album_cover: "https://picsum.photos/seed/db1/300/300", moods: ["motivado", "energético"], is_new_discovery: false },
   { id: "db2", track_name: "Space Oddity", artist: "David Bowie", album: "David Bowie", album_cover: "https://picsum.photos/seed/db2/300/300", moods: ["nostálgico", "melancólico"], is_new_discovery: true },
+  
+  // Bad Bunny
+  { id: "bb3", track_name: "Tití Me Preguntó", artist: "Bad Bunny", album: "Un Verano Sin Ti", album_cover: "https://picsum.photos/seed/bb3/300/300", moods: ["feliz", "energético"], is_new_discovery: true },
+  { id: "bb4", track_name: "Me Porto Bonito", artist: "Bad Bunny", album: "Un Verano Sin Ti", album_cover: "https://picsum.photos/seed/bb4/300/300", moods: ["feliz", "enamorado"], is_new_discovery: true },
+  { id: "bb5", track_name: "Yo Perreo Sola", artist: "Bad Bunny", album: "YHLQMDLG", album_cover: "https://picsum.photos/seed/bb5/300/300", moods: ["energético", "motivado"], is_new_discovery: false },
+  { id: "bb6", track_name: "Callaita", artist: "Bad Bunny", album: "X 100PRE", album_cover: "https://picsum.photos/seed/bb6/300/300", moods: ["chill", "nostálgico"], is_new_discovery: true },
+  
+  // J Balvin
+  { id: "jb1", track_name: "Mi Gente", artist: "J Balvin", album: "Vibras", album_cover: "https://picsum.photos/seed/jb1/300/300", moods: ["feliz", "energético"], is_new_discovery: false },
+  { id: "jb2", track_name: "Rojo", artist: "J Balvin", album: "Colores", album_cover: "https://picsum.photos/seed/jb2/300/300", moods: ["enamorado", "energético"], is_new_discovery: true },
+  { id: "jb3", track_name: "Ay Vamos", artist: "J Balvin", album: "Energía", album_cover: "https://picsum.photos/seed/jb3/300/300", moods: ["feliz", "motivado"], is_new_discovery: true },
+  
+  // Karol G
+  { id: "kg1", track_name: "Tusa", artist: "Karol G", album: "Ocean", album_cover: "https://picsum.photos/seed/kg1/300/300", moods: ["triste", "energético"], is_new_discovery: false },
+  { id: "kg2", track_name: "Bichota", artist: "Karol G", album: "KG0516", album_cover: "https://picsum.photos/seed/kg2/300/300", moods: ["motivado", "energético"], is_new_discovery: true },
+  { id: "kg3", track_name: "Cairo", artist: "Karol G", album: "Mañana Será Bonito", album_cover: "https://picsum.photos/seed/kg3/300/300", moods: ["feliz", "chill"], is_new_discovery: true },
+  
+  // The Weeknd
+  { id: "tw1", track_name: "Blinding Lights", artist: "The Weeknd", album: "After Hours", album_cover: "https://picsum.photos/seed/tw1/300/300", moods: ["energético", "nostálgico"], is_new_discovery: false },
+  { id: "tw2", track_name: "Save Your Tears", artist: "The Weeknd", album: "After Hours", album_cover: "https://picsum.photos/seed/tw2/300/300", moods: ["triste", "nostálgico"], is_new_discovery: true },
+  { id: "tw3", track_name: "Starboy", artist: "The Weeknd", album: "Starboy", album_cover: "https://picsum.photos/seed/tw3/300/300", moods: ["motivado", "energético"], is_new_discovery: true },
+  
+  // Drake
+  { id: "dr1", track_name: "One Dance", artist: "Drake", album: "Views", album_cover: "https://picsum.photos/seed/dr1/300/300", moods: ["chill", "enamorado"], is_new_discovery: false },
+  { id: "dr2", track_name: "God's Plan", artist: "Drake", album: "Scorpion", album_cover: "https://picsum.photos/seed/dr2/300/300", moods: ["motivado", "feliz"], is_new_discovery: true },
+  { id: "dr3", track_name: "Hotline Bling", artist: "Drake", album: "Views", album_cover: "https://picsum.photos/seed/dr3/300/300", moods: ["nostálgico", "chill"], is_new_discovery: true },
+  
+  // Post Malone
+  { id: "pm1", track_name: "Circles", artist: "Post Malone", album: "Hollywood's Bleeding", album_cover: "https://picsum.photos/seed/pm1/300/300", moods: ["melancólico", "chill"], is_new_discovery: false },
+  { id: "pm2", track_name: "Sunflower", artist: "Post Malone", album: "Spider-Man: Into the Spider-Verse", album_cover: "https://picsum.photos/seed/pm2/300/300", moods: ["feliz", "chill"], is_new_discovery: true },
+  { id: "pm3", track_name: "Rockstar", artist: "Post Malone", album: "Beerbongs & Bentleys", album_cover: "https://picsum.photos/seed/pm3/300/300", moods: ["energético", "motivado"], is_new_discovery: true },
+  
+  // Calvin Harris
+  { id: "ch1", track_name: "Summer", artist: "Calvin Harris", album: "Motion", album_cover: "https://picsum.photos/seed/ch1/300/300", moods: ["feliz", "energético"], is_new_discovery: false },
+  { id: "ch2", track_name: "Feel So Close", artist: "Calvin Harris", album: "18 Months", album_cover: "https://picsum.photos/seed/ch2/300/300", moods: ["feliz", "enamorado"], is_new_discovery: true },
+  { id: "ch3", track_name: "This Is What You Came For", artist: "Calvin Harris", album: "Single", album_cover: "https://picsum.photos/seed/ch3/300/300", moods: ["energético", "motivado"], is_new_discovery: true },
+  
+  // Daft Punk
+  { id: "dp1", track_name: "Get Lucky", artist: "Daft Punk", album: "Random Access Memories", album_cover: "https://picsum.photos/seed/dp1/300/300", moods: ["feliz", "chill"], is_new_discovery: false },
+  { id: "dp2", track_name: "One More Time", artist: "Daft Punk", album: "Discovery", album_cover: "https://picsum.photos/seed/dp2/300/300", moods: ["feliz", "energético"], is_new_discovery: true },
+  { id: "dp3", track_name: "Instant Crush", artist: "Daft Punk", album: "Random Access Memories", album_cover: "https://picsum.photos/seed/dp3/300/300", moods: ["nostálgico", "enamorado"], is_new_discovery: true },
+  
+  // SZA
+  { id: "sz1", track_name: "Kill Bill", artist: "SZA", album: "SOS", album_cover: "https://picsum.photos/seed/sz1/300/300", moods: ["triste", "energético"], is_new_discovery: false },
+  { id: "sz2", track_name: "Good Days", artist: "SZA", album: "Single", album_cover: "https://picsum.photos/seed/sz2/300/300", moods: ["chill", "nostálgico"], is_new_discovery: true },
+  { id: "sz3", track_name: "The Weekend", artist: "SZA", album: "Ctrl", album_cover: "https://picsum.photos/seed/sz3/300/300", moods: ["enamorado", "triste"], is_new_discovery: true },
+  
+  // Bruno Mars
+  { id: "brm1", track_name: "Uptown Funk", artist: "Bruno Mars", album: "Uptown Special", album_cover: "https://picsum.photos/seed/brm1/300/300", moods: ["feliz", "energético"], is_new_discovery: false },
+  { id: "brm2", track_name: "Just The Way You Are", artist: "Bruno Mars", album: "Doo-Wops & Hooligans", album_cover: "https://picsum.photos/seed/brm2/300/300", moods: ["enamorado", "feliz"], is_new_discovery: true },
+  { id: "brm3", track_name: "24K Magic", artist: "Bruno Mars", album: "24K Magic", album_cover: "https://picsum.photos/seed/brm3/300/300", moods: ["feliz", "energético"], is_new_discovery: true },
+  
+  // Ed Sheeran
+  { id: "es1", track_name: "Shape of You", artist: "Ed Sheeran", album: "÷", album_cover: "https://picsum.photos/seed/es1/300/300", moods: ["enamorado", "energético"], is_new_discovery: false },
+  { id: "es2", track_name: "Perfect", artist: "Ed Sheeran", album: "÷", album_cover: "https://picsum.photos/seed/es2/300/300", moods: ["enamorado", "feliz"], is_new_discovery: true },
+  { id: "es3", track_name: "Thinking Out Loud", artist: "Ed Sheeran", album: "x", album_cover: "https://picsum.photos/seed/es3/300/300", moods: ["enamorado", "chill"], is_new_discovery: true },
+  
+  // Imagine Dragons
+  { id: "id1", track_name: "Believer", artist: "Imagine Dragons", album: "Evolve", album_cover: "https://picsum.photos/seed/id1/300/300", moods: ["motivado", "energético"], is_new_discovery: false },
+  { id: "id2", track_name: "Radioactive", artist: "Imagine Dragons", album: "Night Visions", album_cover: "https://picsum.photos/seed/id2/300/300", moods: ["energético", "motivado"], is_new_discovery: true },
+  { id: "id3", track_name: "Thunder", artist: "Imagine Dragons", album: "Evolve", album_cover: "https://picsum.photos/seed/id3/300/300", moods: ["motivado", "feliz"], is_new_discovery: true },
+  
+  // Tame Impala
+  { id: "ti1", track_name: "The Less I Know The Better", artist: "Tame Impala", album: "Currents", album_cover: "https://picsum.photos/seed/ti1/300/300", moods: ["nostálgico", "chill"], is_new_discovery: false },
+  { id: "ti2", track_name: "Let It Happen", artist: "Tame Impala", album: "Currents", album_cover: "https://picsum.photos/seed/ti2/300/300", moods: ["chill", "melancólico"], is_new_discovery: true },
+  { id: "ti3", track_name: "Borderline", artist: "Tame Impala", album: "The Slow Rush", album_cover: "https://picsum.photos/seed/ti3/300/300", moods: ["nostálgico", "energético"], is_new_discovery: true },
+  
+  // Red Hot Chili Peppers
+  { id: "rhcp1", track_name: "Under The Bridge", artist: "Red Hot Chili Peppers", album: "Blood Sugar Sex Magik", album_cover: "https://picsum.photos/seed/rhcp1/300/300", moods: ["melancólico", "nostálgico"], is_new_discovery: false },
+  { id: "rhcp2", track_name: "Californication", artist: "Red Hot Chili Peppers", album: "Californication", album_cover: "https://picsum.photos/seed/rhcp2/300/300", moods: ["nostálgico", "chill"], is_new_discovery: true },
+  { id: "rhcp3", track_name: "Can't Stop", artist: "Red Hot Chili Peppers", album: "By The Way", album_cover: "https://picsum.photos/seed/rhcp3/300/300", moods: ["energético", "motivado"], is_new_discovery: true },
+  
+  // Foo Fighters
+  { id: "ff1", track_name: "Everlong", artist: "Foo Fighters", album: "The Colour and the Shape", album_cover: "https://picsum.photos/seed/ff1/300/300", moods: ["nostálgico", "energético"], is_new_discovery: false },
+  { id: "ff2", track_name: "Learn to Fly", artist: "Foo Fighters", album: "There Is Nothing Left to Lose", album_cover: "https://picsum.photos/seed/ff2/300/300", moods: ["motivado", "feliz"], is_new_discovery: true },
+  { id: "ff3", track_name: "Best of You", artist: "Foo Fighters", album: "In Your Honor", album_cover: "https://picsum.photos/seed/ff3/300/300", moods: ["motivado", "energético"], is_new_discovery: true },
+  
+  // Gorillaz
+  { id: "gz1", track_name: "Feel Good Inc.", artist: "Gorillaz", album: "Demon Days", album_cover: "https://picsum.photos/seed/gz1/300/300", moods: ["energético", "chill"], is_new_discovery: false },
+  { id: "gz2", track_name: "Clint Eastwood", artist: "Gorillaz", album: "Gorillaz", album_cover: "https://picsum.photos/seed/gz2/300/300", moods: ["chill", "nostálgico"], is_new_discovery: true },
+  { id: "gz3", track_name: "On Melancholy Hill", artist: "Gorillaz", album: "Plastic Beach", album_cover: "https://picsum.photos/seed/gz3/300/300", moods: ["melancólico", "chill"], is_new_discovery: true },
+  
+  // Mac DeMarco
+  { id: "md4", track_name: "Chamber of Reflection", artist: "Mac DeMarco", album: "Salad Days", album_cover: "https://picsum.photos/seed/md4/300/300", moods: ["melancólico", "chill"], is_new_discovery: false },
+  { id: "md5", track_name: "My Kind of Woman", artist: "Mac DeMarco", album: "2", album_cover: "https://picsum.photos/seed/md5/300/300", moods: ["enamorado", "chill"], is_new_discovery: true },
+  { id: "md6", track_name: "Ode to Viceroy", artist: "Mac DeMarco", album: "2", album_cover: "https://picsum.photos/seed/md6/300/300", moods: ["chill", "feliz"], is_new_discovery: true },
+  
+  // Tyler, The Creator
+  { id: "ttc1", track_name: "See You Again", artist: "Tyler, The Creator", album: "Flower Boy", album_cover: "https://picsum.photos/seed/ttc1/300/300", moods: ["nostálgico", "chill"], is_new_discovery: false },
+  { id: "ttc2", track_name: "EARFQUAKE", artist: "Tyler, The Creator", album: "IGOR", album_cover: "https://picsum.photos/seed/ttc2/300/300", moods: ["enamorado", "nervioso"], is_new_discovery: true },
+  { id: "ttc3", track_name: "Yonkers", artist: "Tyler, The Creator", album: "Goblin", album_cover: "https://picsum.photos/seed/ttc3/300/300", moods: ["energético", "nervioso"], is_new_discovery: true },
+  
+  // Kendrick Lamar
+  { id: "kl1", track_name: "HUMBLE.", artist: "Kendrick Lamar", album: "DAMN.", album_cover: "https://picsum.photos/seed/kl1/300/300", moods: ["motivado", "energético"], is_new_discovery: false },
+  { id: "kl2", track_name: "Swimming Pools", artist: "Kendrick Lamar", album: "good kid, m.A.A.d city", album_cover: "https://picsum.photos/seed/kl2/300/300", moods: ["chill", "nostálgico"], is_new_discovery: true },
+  { id: "kl3", track_name: "Alright", artist: "Kendrick Lamar", album: "To Pimp a Butterfly", album_cover: "https://picsum.photos/seed/kl3/300/300", moods: ["motivado", "feliz"], is_new_discovery: true },
+  
+  // Lana Del Rey
+  { id: "ldr1", track_name: "Summertime Sadness", artist: "Lana Del Rey", album: "Born To Die", album_cover: "https://picsum.photos/seed/ldr1/300/300", moods: ["triste", "nostálgico"], is_new_discovery: false },
+  { id: "ldr2", track_name: "Video Games", artist: "Lana Del Rey", album: "Born To Die", album_cover: "https://picsum.photos/seed/ldr2/300/300", moods: ["melancólico", "nostálgico"], is_new_discovery: true },
+  { id: "ldr3", track_name: "Young and Beautiful", artist: "Lana Del Rey", album: "The Great Gatsby", album_cover: "https://picsum.photos/seed/ldr3/300/300", moods: ["enamorado", "triste"], is_new_discovery: true },
+  
+  // The Strokes
+  { id: "ts4", track_name: "Someday", artist: "The Strokes", album: "Is This It", album_cover: "https://picsum.photos/seed/ts4/300/300", moods: ["nostálgico", "energético"], is_new_discovery: false },
+  { id: "ts5", track_name: "Last Nite", artist: "The Strokes", album: "Is This It", album_cover: "https://picsum.photos/seed/ts5/300/300", moods: ["energético", "chill"], is_new_discovery: true },
+  { id: "ts6", track_name: "Reptilia", artist: "The Strokes", album: "Room on Fire", album_cover: "https://picsum.photos/seed/ts6/300/300", moods: ["energético", "motivado"], is_new_discovery: true },
+  
+  // Rosalía
+  { id: "ros1", track_name: "Malamente", artist: "Rosalía", album: "El Mal Querer", album_cover: "https://picsum.photos/seed/ros1/300/300", moods: ["energético", "motivado"], is_new_discovery: false },
+  { id: "ros2", track_name: "Con Altura", artist: "Rosalía", album: "Single", album_cover: "https://picsum.photos/seed/ros2/300/300", moods: ["feliz", "energético"], is_new_discovery: true },
+  { id: "ros3", track_name: "La Fama", artist: "Rosalía", album: "Motomami", album_cover: "https://picsum.photos/seed/ros3/300/300", moods: ["energético", "motivado"], is_new_discovery: true },
+  
+  // Shakira
+  { id: "sh1", track_name: "Hips Don't Lie", artist: "Shakira", album: "Oral Fixation, Vol. 2", album_cover: "https://picsum.photos/seed/sh1/300/300", moods: ["feliz", "energético"], is_new_discovery: false },
+  { id: "sh2", track_name: "Whenever, Wherever", artist: "Shakira", album: "Laundry Service", album_cover: "https://picsum.photos/seed/sh2/300/300", moods: ["feliz", "enamorado"], is_new_discovery: true },
+  { id: "sh3", track_name: "Waka Waka", artist: "Shakira", album: "Sale el Sol", album_cover: "https://picsum.photos/seed/sh3/300/300", moods: ["feliz", "motivado"], is_new_discovery: true },
 ];
 
 // Artistas únicos para autocompletar
