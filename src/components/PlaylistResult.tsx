@@ -97,18 +97,31 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
       window.open(url, "_blank");
       toast.success('¡Playlist abierta en YouTube!');
     } else {
-      // Para Spotify y Apple Music: abrir múltiples pestañas
-      tracks.forEach(track => {
-        const q = encodeURIComponent(`${track.track_name} ${track.artist}`);
-        let url = '';
-        if (service === 'spotify') {
-          url = `https://open.spotify.com/search/${q}`;
-        } else if (service === 'apple') {
-          url = `https://music.apple.com/search?term=${q}`;
-        }
-        window.open(url, "_blank");
+      // Para Spotify y Apple Music: abrir con delay para evitar el bloqueador de popups
+      const serviceName = service === 'spotify' ? 'Spotify' : 'Apple Music';
+      const maxTabs = 10; // Limitar a 10 pestañas para evitar saturar el navegador
+      const limitedTracks = tracks.slice(0, maxTabs);
+      
+      toast.success(`Abriendo ${limitedTracks.length} canciones en ${serviceName}. Permite las ventanas emergentes si tu navegador las bloquea.`);
+      
+      limitedTracks.forEach((track, index) => {
+        setTimeout(() => {
+          const q = encodeURIComponent(`${track.track_name} ${track.artist}`);
+          let url = '';
+          if (service === 'spotify') {
+            url = `https://open.spotify.com/search/${q}`;
+          } else if (service === 'apple') {
+            url = `https://music.apple.com/search?term=${q}`;
+          }
+          window.open(url, "_blank");
+        }, index * 300); // 300ms de delay entre cada pestaña
       });
-      toast.success(`Abriendo ${tracks.length} canciones en ${service === 'spotify' ? 'Spotify' : 'Apple Music'}`);
+      
+      if (tracks.length > maxTabs) {
+        setTimeout(() => {
+          toast.info(`Mostrando las primeras ${maxTabs} de ${tracks.length} canciones.`);
+        }, 1000);
+      }
     }
   };
 
