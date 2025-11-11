@@ -48,6 +48,36 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
   const [newMusicPercentage, setNewMusicPercentage] = useState<number[]>([50]);
   const [loading, setLoading] = useState(false);
 
+  // Utilidad: comprimir imagen a dataURL JPEG para ahorrar espacio en localStorage
+  const compressImage = (file: File, maxWidth = 1024, quality = 0.7): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const scale = Math.min(1, maxWidth / img.width);
+          const w = Math.round(img.width * scale);
+          const h = Math.round(img.height * scale);
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(reader.result as string);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL('image/jpeg', quality);
+          resolve(dataUrl);
+        };
+        img.onerror = () => resolve(reader.result as string);
+        img.src = reader.result as string;
+      };
+      reader.onerror = () => reject(new Error('No se pudo leer la imagen'));
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -102,11 +132,12 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
 
       // Convertir foto a base64 si existe
       if (photo) {
-        const reader = new FileReader();
-        photoUrl = await new Promise<string>((resolve) => {
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(photo);
-        });
+        try {
+          photoUrl = await compressImage(photo, 1024, 0.7);
+        } catch {
+          // Fallback: sin foto si falla la compresión
+          photoUrl = null;
+        }
       }
 
       // Crear experiencia en localStorage
@@ -123,7 +154,26 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
 
       const experiences = JSON.parse(localStorage.getItem("fryda_experiences") || "[]");
       experiences.push(experience);
-      localStorage.setItem("fryda_experiences", JSON.stringify(experiences));
+      try {
+        localStorage.setItem("fryda_experiences", JSON.stringify(experiences));
+      } catch (e) {
+        // Intento 1: guardar sin foto para evitar exceder la cuota
+        const expNoPhoto = { ...experience, photo_url: null };
+        experiences[experiences.length - 1] = expNoPhoto;
+        try {
+          localStorage.setItem("fryda_experiences", JSON.stringify(experiences));
+          toast.info("Guardamos tu recuerdo sin la foto para ahorrar espacio.");
+        } catch {
+          // Intento 2: conservar solo los últimos 20 recuerdos
+          const trimmed = experiences.slice(-20);
+          try {
+            localStorage.setItem("fryda_experiences", JSON.stringify(trimmed));
+            toast.info("Espacio limitado: conservamos tus últimos 20 recuerdos.");
+          } catch {
+            toast.error("Espacio de almacenamiento lleno. Elimina recuerdos antiguos o desactiva el modo incógnito.");
+          }
+        }
+      }
 
       // Shuffle helper
       const shuffleArray = <T,>(array: T[]): T[] => {
@@ -224,7 +274,17 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
 
       const playlists = JSON.parse(localStorage.getItem("fryda_playlists") || "[]");
       playlists.push(playlist);
-      localStorage.setItem("fryda_playlists", JSON.stringify(playlists));
+      try {
+        localStorage.setItem("fryda_playlists", JSON.stringify(playlists));
+      } catch {
+        const trimmed = playlists.slice(-50);
+        try {
+          localStorage.setItem("fryda_playlists", JSON.stringify(trimmed));
+          toast.info("Espacio limitado: mantuvimos las últimas 50 playlists.");
+        } catch {
+          // Sin acción adicional
+        }
+      }
 
       // Guardar tracks
       const tracks = mockTracks.map((track, index) => ({
@@ -236,7 +296,17 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
 
       const allTracks = JSON.parse(localStorage.getItem("fryda_tracks") || "[]");
       allTracks.push(...tracks);
-      localStorage.setItem("fryda_tracks", JSON.stringify(allTracks));
+      try {
+        localStorage.setItem("fryda_tracks", JSON.stringify(allTracks));
+      } catch {
+        const trimmed = allTracks.slice(-2000);
+        try {
+          localStorage.setItem("fryda_tracks", JSON.stringify(trimmed));
+          toast.info("Espacio limitado: mantuvimos las canciones más recientes.");
+        } catch {
+          // Sin acción adicional
+        }
+      }
 
       toast.success(`¡Playlist generada! Emoción: ${selectedMood}`);
       onPlaylistGenerated(playlistId);

@@ -57,7 +57,13 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
         liked: true,
         created_at: new Date().toISOString(),
       });
-      localStorage.setItem("fryda_preferences", JSON.stringify(preferences));
+      try {
+        localStorage.setItem("fryda_preferences", JSON.stringify(preferences));
+      } catch {
+        const trimmed = preferences.slice(-500);
+        localStorage.setItem("fryda_preferences", JSON.stringify(trimmed));
+        toast.info("Espacio limitado: guardamos tus favoritos más recientes.");
+      }
 
       toast.success("Guardado en tus favoritos");
     } catch (error) {
