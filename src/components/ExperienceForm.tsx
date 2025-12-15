@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { TRACK_CATALOG, ARTISTS, SONGS } from "@/data/tracks";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
-
+import { SettingsDialog } from "./SettingsDialog";
 interface ExperienceFormProps {
   onPlaylistGenerated: (playlistId: string) => void;
 }
@@ -328,14 +328,16 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
   };
 
   return (
-    <Card className="p-6 space-y-6 shadow-[var(--shadow-soft)] backdrop-blur-sm bg-card/80">
-      {/* Hero Title */}
-      <div className="text-center py-8">
-        <h1 className="text-7xl md:text-8xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent mb-2">
-          Fryda
-        </h1>
-        <p className="text-muted-foreground italic">Every memory has its song</p>
-      </div>
+    <>
+      <SettingsDialog />
+      <Card className="p-6 space-y-6 shadow-[var(--shadow-soft)] backdrop-blur-sm bg-card/80">
+        {/* Hero Title */}
+        <div className="text-center py-8">
+          <h1 className="text-7xl md:text-8xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent mb-2">
+            Fryda
+          </h1>
+          <p className="text-muted-foreground italic">Every memory has its song</p>
+        </div>
 
       <div className="space-y-2">
         <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -520,6 +522,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
           )}
         </Button>
       </form>
-    </Card>
+      </Card>
+    </>
   );
 };
