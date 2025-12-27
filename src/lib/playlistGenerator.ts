@@ -41,39 +41,71 @@ function shuffleArray<T>(array: T[]): T[] {
 export function generateSmartPlaylist(
   selectedMood: string,
   selectedMomentType: string,
-  selectedTags: Array<{ type: 'artist' | 'song'; value: string; label: string }>,
+  selectedTags: Array<{ type: "artist" | "song"; value: string; label: string }>,
   newMusicPercentage: number,
   photoAnalysis?: PhotoAnalysis | null,
   musicProfile?: MusicProfile | null
 ): TrackData[] {
-  
-  // Identificar canciones conocidas (de artistas o canciones del usuario)
-  const knownSongIds = new Set<string>();
-  TRACK_CATALOG.forEach(track => {
-    const isKnown = selectedTags.some(tag => {
-      if (tag.type === 'artist') {
-        return track.artist.toLowerCase() === tag.value.toLowerCase();
-      } else {
-        return track.id === tag.value || track.track_name.toLowerCase().includes(tag.label.toLowerCase());
-      }
-    });
-    if (isKnown) knownSongIds.add(track.id);
-  });
+  const targetSize = 25;
+
+  const norm = (s: string) => (s || "").trim().toLowerCase();
+
+  // Aliases para moods (por si el usuario piensa en un mood "rapero")
+  const moodAliases: Record<string, string[]> = {
+    rapero: ["rapero", "motivado", "nervioso", "libre"],
+    rap: ["rapero", "motivado", "nervioso", "libre"],
+    hiphop: ["rapero", "motivado", "nervioso", "libre"],
+    "hip hop": ["rapero", "motivado", "nervioso", "libre"],
+  };
+
+  const effectiveMoods = moodAliases[norm(selectedMood)] ?? [selectedMood];
+
+  const selectedSongIds = new Set(
+    selectedTags.filter((t) => t.type === "song").map((t) => t.value)
+  );
+  const selectedArtists = new Set(
+    selectedTags
+      .filter((t) => t.type === "artist")
+      .map((t) => norm(t.value))
+  );
+
+  const tagScoreForTrack = (track: TrackData) => {
+    // Canción explícita pesa más que artista.
+    if (selectedSongIds.has(track.id)) return 60;
+    if (selectedArtists.has(norm(track.artist))) return 45;
+    return 0;
+  };
+
+  // Tracks "pineados" por tags: SIEMPRE deben aparecer en la playlist si existen.
+  const pinnedTracks = TRACK_CATALOG
+    .map((t) => ({ track: t, tagScore: tagScoreForTrack(t) }))
+    .filter((x) => x.tagScore > 0)
+    .sort((a, b) => b.tagScore - a.tagScore)
+    .map((x) => x.track);
+
+  const pinnedMax = selectedTags.length
+    ? Math.min(8, Math.max(1, selectedTags.length * 2))
+    : 0;
+  const pinnedSelection = shuffleArray(pinnedTracks).slice(0, Math.min(pinnedMax, targetSize));
+  const pinnedIds = new Set(pinnedSelection.map((t) => t.id));
 
   // Puntuar cada track
-  const scoredTracks: ScoredTrack[] = TRACK_CATALOG.map(track => {
+  const scoredTracks: ScoredTrack[] = TRACK_CATALOG.map((track) => {
     let score = 0;
-    const isKnown = knownSongIds.has(track.id);
+
+    // === PUNTUACIÓN POR TAGS (artista/canción) ===
+    const tagScore = tagScoreForTrack(track);
+    const isKnown = tagScore > 0;
+    score += tagScore;
 
     // === PUNTUACIÓN POR MOOD ===
-    // +5 puntos si coincide el mood principal
-    if (track.moods.includes(selectedMood)) {
+    if (effectiveMoods.some((m) => track.moods.includes(m))) {
       score += 5;
     }
-    
+
     // +1 punto por cada mood secundario del perfil
     if (musicProfile?.secondaryMoods) {
-      track.moods.forEach(trackMood => {
+      track.moods.forEach((trackMood) => {
         if (musicProfile.secondaryMoods.includes(trackMood)) {
           score += 1;
         }
@@ -81,14 +113,12 @@ export function generateSmartPlaylist(
     }
 
     // === PUNTUACIÓN POR TIPO DE MOMENTO ===
-    // +3 puntos si coincide el tipo de momento
     if (selectedMomentType && track.moment_types?.includes(selectedMomentType)) {
       score += 3;
     }
 
     // === PUNTUACIÓN POR ANÁLISIS VISUAL (si hay foto) ===
     if (photoAnalysis) {
-      // Mapeo de escenas de foto a moment_types
       const sceneToMoment: Record<string, string[]> = {
         beach: ["vacaciones"],
         city: ["noche", "fiesta"],
@@ -103,11 +133,10 @@ export function generateSmartPlaylist(
       };
 
       const relatedMoments = sceneToMoment[photoAnalysis.scene] || [];
-      if (track.moment_types?.some(mt => relatedMoments.includes(mt))) {
+      if (track.moment_types?.some((mt) => relatedMoments.includes(mt))) {
         score += 2;
       }
 
-      // Mapeo de mood de foto a moods de canciones
       const photoMoodToTrackMoods: Record<string, string[]> = {
         happy: ["feliz", "motivado", "libre"],
         melancholic: ["nostálgico", "triste", "reflexivo"],
@@ -119,31 +148,25 @@ export function generateSmartPlaylist(
       };
 
       const relatedMoods = photoMoodToTrackMoods[photoAnalysis.mood] || [];
-      if (track.moods.some(m => relatedMoods.includes(m))) {
+      if (track.moods.some((m) => relatedMoods.includes(m))) {
         score += 2;
       }
 
-      // Bonus por energía similar
       if (track.energy) {
         const energyDiff = Math.abs(track.energy - photoAnalysis.energy);
         if (energyDiff <= 2) score += 2;
         else if (energyDiff <= 4) score += 1;
       }
 
-      // Bonus por escenas visuales coincidentes
       if (track.visualScenes?.includes(photoAnalysis.scene)) {
         score += 2;
       }
 
-      // Bonus por colores/vibes
       if (track.colorVibes && photoAnalysis.dominantColors) {
-        const matchingColors = track.colorVibes.filter(c => 
-          photoAnalysis.dominantColors.includes(c)
-        );
+        const matchingColors = track.colorVibes.filter((c) => photoAnalysis.dominantColors.includes(c));
         score += matchingColors.length * 0.5;
       }
 
-      // Ajuste por tiempo del día
       const timeToMoments: Record<string, string[]> = {
         morning: ["tranquilo"],
         afternoon: ["vacaciones", "inspiracion"],
@@ -152,26 +175,27 @@ export function generateSmartPlaylist(
       };
 
       const timeRelatedMoments = timeToMoments[photoAnalysis.timeOfDay] || [];
-      if (track.moment_types?.some(mt => timeRelatedMoments.includes(mt))) {
+      if (track.moment_types?.some((mt) => timeRelatedMoments.includes(mt))) {
         score += 1;
       }
 
-      // Ajuste por temporada
-      if (photoAnalysis.season === "summer" && 
-          track.moment_types?.some(mt => ["vacaciones", "fiesta"].includes(mt))) {
+      if (
+        photoAnalysis.season === "summer" &&
+        track.moment_types?.some((mt) => ["vacaciones", "fiesta"].includes(mt))
+      ) {
         score += 1;
       }
-      if (photoAnalysis.season === "winter" && 
-          track.moods.some(m => ["nostálgico", "reflexivo", "relajado"].includes(m))) {
+      if (
+        photoAnalysis.season === "winter" &&
+        track.moods.some((m) => ["nostálgico", "reflexivo", "relajado"].includes(m))
+      ) {
         score += 1;
       }
     }
 
     // === PUNTUACIÓN POR GÉNERO (si hay hints) ===
     if (musicProfile?.genreHints && track.genres) {
-      const matchingGenres = track.genres.filter(g => 
-        musicProfile.genreHints.includes(g)
-      );
+      const matchingGenres = track.genres.filter((g) => musicProfile.genreHints.includes(g));
       score += matchingGenres.length * 0.5;
     }
 
@@ -180,39 +204,45 @@ export function generateSmartPlaylist(
 
   // Filtrar tracks con puntuación > 0 y ordenar
   const relevantTracks = scoredTracks
-    .filter(item => item.score > 0)
+    .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score);
 
-  // Separar conocidas de nuevas
-  const knownTracks = relevantTracks.filter(t => t.isKnown);
-  const newTracks = relevantTracks.filter(t => !t.isKnown);
+  // Pools (sin duplicar los pineados)
+  const knownTracks = relevantTracks.filter((t) => t.isKnown && !pinnedIds.has(t.track.id));
+  const newTracks = relevantTracks.filter((t) => !t.isKnown && !pinnedIds.has(t.track.id));
 
-  // Calcular distribución según slider
-  const targetSize = 25;
-  const countNew = Math.round(targetSize * (newMusicPercentage / 100));
-  const countKnown = targetSize - countNew;
+  // Calcular distribución según slider (sobre el espacio restante)
+  const remainingSlots = targetSize - pinnedSelection.length;
+  const clampedNewPct = Math.min(100, Math.max(0, newMusicPercentage));
+  const countNew = Math.round(remainingSlots * (clampedNewPct / 100));
+  const countKnown = remainingSlots - countNew;
 
-  // Seleccionar con algo de aleatoriedad para variedad
   const selectedKnown = shuffleArray(knownTracks.slice(0, Math.max(countKnown * 3, 15)))
     .slice(0, countKnown)
-    .map(t => t.track);
-  
+    .map((t) => t.track);
+
   const selectedNew = shuffleArray(newTracks.slice(0, Math.max(countNew * 3, 20)))
     .slice(0, countNew)
-    .map(t => t.track);
+    .map((t) => t.track);
 
-  let playlist = [...selectedKnown, ...selectedNew];
+  let playlist = [...pinnedSelection, ...selectedKnown, ...selectedNew];
 
-  // Si no hay suficientes, completar con tracks del mood principal
-  if (playlist.length < 20) {
-    const filler = TRACK_CATALOG.filter(t => 
-      t.moods.includes(selectedMood) && !playlist.find(pt => pt.id === t.id)
+  // Completar si faltan tracks
+  if (playlist.length < targetSize) {
+    const already = new Set(playlist.map((t) => t.id));
+
+    const moodFill = TRACK_CATALOG.filter(
+      (t) => effectiveMoods.some((m) => t.moods.includes(m)) && !already.has(t.id)
     );
-    playlist.push(...shuffleArray(filler).slice(0, 20 - playlist.length));
+
+    const fallbackFill = TRACK_CATALOG.filter((t) => !already.has(t.id));
+
+    const fillFrom = moodFill.length > 0 ? moodFill : fallbackFill;
+    playlist = [...playlist, ...shuffleArray(fillFrom).slice(0, targetSize - playlist.length)];
   }
 
-  // Shuffle final y limitar
-  return shuffleArray(playlist).slice(0, targetSize);
+  // Mantener relevancia: los pineados van primero y el resto tiene variedad por shuffle parcial.
+  return playlist.slice(0, targetSize);
 }
 
 // Función para determinar el mood secundario más relevante basado en la foto

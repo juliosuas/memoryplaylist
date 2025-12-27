@@ -24,6 +24,7 @@ const MOODS = [
   { id: "triste", label: "Triste", emoji: "😢" },
   { id: "reflexivo", label: "Reflexivo", emoji: "💭" },
   { id: "motivado", label: "Motivado", emoji: "💪" },
+  { id: "rapero", label: "Rapero", emoji: "🎤" },
   { id: "esperanzado", label: "Esperanzado", emoji: "🌈" },
   { id: "libre", label: "Libre", emoji: "😎" },
 ];
@@ -147,7 +148,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         is_new_discovery: !selectedTags.some((tag) =>
           tag.type === "artist"
             ? t.artist.toLowerCase() === tag.value.toLowerCase()
-            : t.track_name.toLowerCase().includes(tag.label.toLowerCase())
+            : t.id === tag.value
         ),
         youtubeId: t.youtubeId || "",
       }));
