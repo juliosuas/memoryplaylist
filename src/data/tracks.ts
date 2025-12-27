@@ -8,6 +8,11 @@ export interface TrackData {
   moment_types?: string[];
   is_new_discovery?: boolean;
   youtubeId?: string;
+  // Nuevos atributos para matching visual
+  energy?: number;           // 1-10 scale
+  visualScenes?: string[];   // beach, city, nature, sunset, party, night, etc.
+  colorVibes?: string[];     // warm, cool, vibrant, muted, golden
+  genres?: string[];         // rock, pop, indie, electronic, etc.
 }
 
 // Catálogo ampliado de canciones con moods que coinciden con el formulario

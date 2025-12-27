@@ -3,12 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Upload, Sparkles, X } from "lucide-react";
+import { Upload, Sparkles, X, Camera, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { TRACK_CATALOG, ARTISTS, SONGS } from "@/data/tracks";
+import { ARTISTS, SONGS } from "@/data/tracks";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { SettingsDialog } from "./SettingsDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { generateSmartPlaylist, getPhotoInsight, PhotoAnalysis, MusicProfile } from "@/lib/playlistGenerator";
+
 interface ExperienceFormProps {
   onPlaylistGenerated: (playlistId: string) => void;
 }
@@ -47,6 +50,9 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
   const [photoPreview, setPhotoPreview] = useState<string>("");
   const [newMusicPercentage, setNewMusicPercentage] = useState<number[]>([50]);
   const [loading, setLoading] = useState(false);
+  const [analyzingPhoto, setAnalyzingPhoto] = useState(false);
+  const [photoAnalysis, setPhotoAnalysis] = useState<PhotoAnalysis | null>(null);
+  const [photoInsight, setPhotoInsight] = useState<string | null>(null);
 
   // Utilidad: comprimir imagen a dataURL JPEG para ahorrar espacio en localStorage
   const compressImage = (file: File, maxWidth = 1024, quality = 0.7): Promise<string> => {
@@ -78,13 +84,46 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
     });
   };
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setPhoto(file);
+      setPhotoAnalysis(null);
+      setPhotoInsight(null);
+      
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoPreview(reader.result as string);
+      reader.onloadend = async () => {
+        const base64 = reader.result as string;
+        setPhotoPreview(base64);
+        
+        // Analizar foto con IA automáticamente
+        setAnalyzingPhoto(true);
+        try {
+          const { data, error } = await supabase.functions.invoke('analyze-photo', {
+            body: {
+              photoBase64: base64,
+              selectedMood,
+              selectedMomentType,
+              selectedTags,
+              newMusicPercentage: newMusicPercentage[0],
+            },
+          });
+          
+          if (error) {
+            console.error("Error analizando foto:", error);
+          } else if (data?.photoAnalysis) {
+            setPhotoAnalysis(data.photoAnalysis);
+            const insight = getPhotoInsight(data.photoAnalysis);
+            setPhotoInsight(insight);
+            if (insight) {
+              toast.success(insight);
+            }
+          }
+        } catch (err) {
+          console.error("Error en análisis:", err);
+        } finally {
+          setAnalyzingPhoto(false);
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -128,26 +167,64 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
 
     setLoading(true);
     try {
-      let photoUrl = null;
-
-      // Convertir foto a base64 si existe
-      if (photo) {
+      // Si hay foto y no se ha analizado aún, analizarla
+      let currentPhotoAnalysis = photoAnalysis;
+      let musicProfile: MusicProfile | null = null;
+      
+      if (photoPreview && !photoAnalysis) {
+        toast.info("Analizando tu foto con IA...");
         try {
-          photoUrl = await compressImage(photo, 1024, 0.7);
-        } catch {
-          // Fallback: sin foto si falla la compresión
-          photoUrl = null;
+          const { data, error } = await supabase.functions.invoke('analyze-photo', {
+            body: {
+              photoBase64: photoPreview,
+              selectedMood,
+              selectedMomentType,
+              selectedTags,
+              newMusicPercentage: newMusicPercentage[0],
+            },
+          });
+          
+          if (!error && data?.photoAnalysis) {
+            currentPhotoAnalysis = data.photoAnalysis;
+            musicProfile = data.musicProfile;
+          }
+        } catch (err) {
+          console.error("Error analizando foto:", err);
         }
       }
 
-      // Crear experiencia en localStorage
+      // Generar playlist usando el algoritmo inteligente
+      const playlistTracks = generateSmartPlaylist(
+        selectedMood,
+        selectedMomentType,
+        selectedTags,
+        newMusicPercentage[0],
+        currentPhotoAnalysis,
+        musicProfile
+      );
+
+      // Preparar tracks para guardar
+      const tracksToSave = playlistTracks.map(t => ({
+        track_name: t.track_name,
+        artist: t.artist,
+        album: t.album,
+        album_cover: t.album_cover,
+        is_new_discovery: !selectedTags.some(tag => 
+          tag.type === 'artist' 
+            ? t.artist.toLowerCase() === tag.value.toLowerCase()
+            : t.track_name.toLowerCase().includes(tag.label.toLowerCase())
+        ),
+        youtubeId: t.youtubeId || '',
+      }));
+
+      // Crear experiencia (sin guardar foto completa en localStorage)
       const experienceId = Date.now().toString();
       const experience = {
         id: experienceId,
         mood: selectedMood,
         moment_type: selectedMomentType,
         tags: selectedTags,
-        photo_url: photoUrl,
+        photo_analysis: currentPhotoAnalysis,
         new_music_percentage: newMusicPercentage[0],
         created_at: new Date().toISOString(),
       };
@@ -156,111 +233,27 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
       experiences.push(experience);
       try {
         localStorage.setItem("fryda_experiences", JSON.stringify(experiences));
-      } catch (e) {
-        // Intento 1: guardar sin foto para evitar exceder la cuota
-        const expNoPhoto = { ...experience, photo_url: null };
-        experiences[experiences.length - 1] = expNoPhoto;
+      } catch {
+        const trimmed = experiences.slice(-20);
         try {
-          localStorage.setItem("fryda_experiences", JSON.stringify(experiences));
-          toast.info("Guardamos tu recuerdo sin la foto para ahorrar espacio.");
+          localStorage.setItem("fryda_experiences", JSON.stringify(trimmed));
         } catch {
-          // Intento 2: conservar solo los últimos 20 recuerdos
-          const trimmed = experiences.slice(-20);
-          try {
-            localStorage.setItem("fryda_experiences", JSON.stringify(trimmed));
-            toast.info("Espacio limitado: conservamos tus últimos 20 recuerdos.");
-          } catch {
-            toast.error("Espacio de almacenamiento lleno. Elimina recuerdos antiguos o desactiva el modo incógnito.");
-          }
+          // Ignorar
         }
       }
 
-      // Shuffle helper
-      const shuffleArray = <T,>(array: T[]): T[] => {
-        const shuffled = [...array];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-        return shuffled;
-      };
-
-      // Identificar canciones conocidas (de artistas o canciones ingresadas por el usuario)
-      const knownSongs = TRACK_CATALOG.filter(track => 
-        selectedTags.some(tag => {
-          if (tag.type === 'artist') {
-            return track.artist.toLowerCase() === tag.value.toLowerCase();
-          } else {
-            return track.id === tag.value || track.track_name.toLowerCase().includes(tag.label.toLowerCase());
-          }
-        })
-      );
-
-      // Algoritmo mejorado: priorizar mood + tipo de momento
-      const scoredTracks = TRACK_CATALOG.map(track => {
-        let score = 0;
-        const isKnown = knownSongs.some(k => k.id === track.id);
-        
-        // +3 puntos si coincide el mood
-        if (track.moods.includes(selectedMood)) score += 3;
-        
-        // +2 puntos si coincide el tipo de momento
-        if (selectedMomentType && track.moment_types?.includes(selectedMomentType)) score += 2;
-        
-        // +1 punto por cada mood secundario que coincida
-        track.moods.forEach(m => {
-          if (m !== selectedMood && MOODS.some(mood => mood.id === m)) score += 0.5;
-        });
-        
-        return { track, score, isKnown };
-      }).filter(item => item.score > 0);
-
-      // Ordenar por score y separar conocidas de nuevas
-      const sortedKnown = scoredTracks.filter(t => t.isKnown).sort((a, b) => b.score - a.score);
-      const sortedNew = scoredTracks.filter(t => !t.isKnown).sort((a, b) => b.score - a.score);
-
-      // Calcular cantidad según slider
-      const percentage = newMusicPercentage[0];
-      const targetSize = 25;
-      const countNew = Math.round(targetSize * (percentage / 100));
-      const countKnown = targetSize - countNew;
-
-      // Seleccionar tracks
-      const selectedKnown = shuffleArray(sortedKnown.slice(0, Math.max(countKnown * 2, 10)))
-        .slice(0, countKnown)
-        .map(t => t.track);
-      const selectedNew = shuffleArray(sortedNew.slice(0, Math.max(countNew * 2, 15)))
-        .slice(0, countNew)
-        .map(t => t.track);
-      
-      let playlistTracks = [...selectedKnown, ...selectedNew];
-
-      // Completar si faltan canciones
-      if (playlistTracks.length < 20) {
-        const remaining = TRACK_CATALOG.filter(t => 
-          t.moods.includes(selectedMood) && !playlistTracks.find(pt => pt.id === t.id)
-        );
-        playlistTracks.push(...shuffleArray(remaining).slice(0, 20 - playlistTracks.length));
-      }
-
-      // Shuffle final
-      playlistTracks = shuffleArray(playlistTracks).slice(0, targetSize);
-
-      const mockTracks = playlistTracks.map(t => ({
-        track_name: t.track_name,
-        artist: t.artist,
-        album: t.album,
-        album_cover: t.album_cover,
-        is_new_discovery: !knownSongs.some(known => known.id === t.id),
-        youtubeId: t.youtubeId || '',
-      }));
-
+      // Crear playlist
       const playlistId = Date.now().toString();
+      const playlistName = currentPhotoAnalysis 
+        ? `Playlist ${selectedMood} • ${getPhotoInsight(currentPhotoAnalysis)?.split(' ')[0] || '📸'}`
+        : `Playlist ${selectedMood}`;
+      
       const playlist = {
         id: playlistId,
         experience_id: experienceId,
-        name: `Playlist ${selectedMood}`,
+        name: playlistName,
         emotion: selectedMood,
+        photo_analysis: currentPhotoAnalysis,
         created_at: new Date().toISOString(),
       };
 
@@ -272,14 +265,13 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         const trimmed = playlists.slice(-50);
         try {
           localStorage.setItem("fryda_playlists", JSON.stringify(trimmed));
-          toast.info("Espacio limitado: mantuvimos las últimas 50 playlists.");
         } catch {
-          // Sin acción adicional
+          // Ignorar
         }
       }
 
       // Guardar tracks
-      const tracks = mockTracks.map((track, index) => ({
+      const tracks = tracksToSave.map((track, index) => ({
         id: `${playlistId}-${index}`,
         playlist_id: playlistId,
         ...track,
@@ -294,13 +286,17 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         const trimmed = allTracks.slice(-2000);
         try {
           localStorage.setItem("fryda_tracks", JSON.stringify(trimmed));
-          toast.info("Espacio limitado: mantuvimos las canciones más recientes.");
         } catch {
-          // Sin acción adicional
+          // Ignorar
         }
       }
 
-      toast.success(`¡Playlist generada! Emoción: ${selectedMood}`);
+      const insight = currentPhotoAnalysis ? getPhotoInsight(currentPhotoAnalysis) : null;
+      toast.success(
+        insight 
+          ? `¡Playlist personalizada! ${insight}` 
+          : `¡Playlist generada! Emoción: ${selectedMood}`
+      );
       onPlaylistGenerated(playlistId);
 
       // Reset form
@@ -310,6 +306,8 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
       setSearchQuery("");
       setPhoto(null);
       setPhotoPreview("");
+      setPhotoAnalysis(null);
+      setPhotoInsight(null);
       setNewMusicPercentage([50]);
     } catch (error: any) {
       console.error("Error:", error);
@@ -352,6 +350,19 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
                   alt="Preview"
                   className="w-full h-full object-cover"
                 />
+                {analyzingPhoto && (
+                  <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
+                    <div className="flex items-center gap-2 text-primary">
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                      <span>Analizando foto con IA...</span>
+                    </div>
+                  </div>
+                )}
+                {photoInsight && !analyzingPhoto && (
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent p-3">
+                    <span className="text-sm font-medium">{photoInsight}</span>
+                  </div>
+                )}
                 <Button
                   type="button"
                   variant="secondary"
@@ -360,6 +371,8 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
                   onClick={() => {
                     setPhoto(null);
                     setPhotoPreview("");
+                    setPhotoAnalysis(null);
+                    setPhotoInsight(null);
                   }}
                 >
                   Cambiar

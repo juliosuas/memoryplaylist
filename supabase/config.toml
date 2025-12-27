@@ -1,1 +1,7 @@
 project_id = "oapvbjmuajxkprowtjny"
+
+[functions.analyze-emotion]
+verify_jwt = false
+
+[functions.analyze-photo]
+verify_jwt = false
