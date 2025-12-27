@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ExperienceForm } from "@/components/ExperienceForm";
 import { PlaylistResult } from "@/components/PlaylistResult";
 import { SettingsDialog } from "@/components/SettingsDialog";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Heart } from "lucide-react";
 
 const Index = () => {
@@ -14,7 +15,8 @@ const Index = () => {
 
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-xl">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-center">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="w-10" /> {/* Spacer */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
               <Heart className="w-5 h-5 text-primary-foreground fill-current" />
@@ -24,6 +26,7 @@ const Index = () => {
               <p className="text-xs text-muted-foreground -mt-0.5">Every memory has its song</p>
             </div>
           </div>
+          <ThemeToggle />
         </div>
       </header>
 
