@@ -196,62 +196,54 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         })
       );
 
-      // Identificar música nueva del mismo mood (excluyendo las conocidas)
-      const newSongs = TRACK_CATALOG.filter(track => 
-        track.moods.includes(selectedMood) && 
-        !knownSongs.some(known => known.id === track.id)
-      );
+      // Algoritmo mejorado: priorizar mood + tipo de momento
+      const scoredTracks = TRACK_CATALOG.map(track => {
+        let score = 0;
+        const isKnown = knownSongs.some(k => k.id === track.id);
+        
+        // +3 puntos si coincide el mood
+        if (track.moods.includes(selectedMood)) score += 3;
+        
+        // +2 puntos si coincide el tipo de momento
+        if (selectedMomentType && track.moment_types?.includes(selectedMomentType)) score += 2;
+        
+        // +1 punto por cada mood secundario que coincida
+        track.moods.forEach(m => {
+          if (m !== selectedMood && MOODS.some(mood => mood.id === m)) score += 0.5;
+        });
+        
+        return { track, score, isKnown };
+      }).filter(item => item.score > 0);
 
-      // Calcular cantidad de canciones según el porcentaje del slider
+      // Ordenar por score y separar conocidas de nuevas
+      const sortedKnown = scoredTracks.filter(t => t.isKnown).sort((a, b) => b.score - a.score);
+      const sortedNew = scoredTracks.filter(t => !t.isKnown).sort((a, b) => b.score - a.score);
+
+      // Calcular cantidad según slider
       const percentage = newMusicPercentage[0];
       const targetSize = 25;
-      let countKnown = 0;
-      let countNew = 0;
+      const countNew = Math.round(targetSize * (percentage / 100));
+      const countKnown = targetSize - countNew;
 
-      if (percentage === 0) {
-        // 0%: Solo canciones conocidas
-        countKnown = targetSize;
-        countNew = 0;
-      } else if (percentage === 100) {
-        // 100%: Solo música nueva
-        countKnown = 0;
-        countNew = targetSize;
-      } else if (percentage <= 49) {
-        // 1-49%: Mayoría conocidas (70-90%)
-        const knownRatio = 0.9 - (percentage / 49) * 0.2; // 0.9 a 0.7
-        countKnown = Math.round(targetSize * knownRatio);
-        countNew = targetSize - countKnown;
-      } else {
-        // 50-99%: De 50/50 a casi todas nuevas
-        const ratio = percentage / 100;
-        countKnown = Math.round(targetSize * (1 - ratio));
-        countNew = targetSize - countKnown;
-      }
-
-      // Seleccionar canciones
-      const selectedKnown = shuffleArray(knownSongs).slice(0, countKnown);
-      const selectedNew = shuffleArray(newSongs).slice(0, countNew);
+      // Seleccionar tracks
+      const selectedKnown = shuffleArray(sortedKnown.slice(0, Math.max(countKnown * 2, 10)))
+        .slice(0, countKnown)
+        .map(t => t.track);
+      const selectedNew = shuffleArray(sortedNew.slice(0, Math.max(countNew * 2, 15)))
+        .slice(0, countNew)
+        .map(t => t.track);
       
       let playlistTracks = [...selectedKnown, ...selectedNew];
 
-      // Si no llegamos a 20 canciones, completar con canciones aleatorias del mood
+      // Completar si faltan canciones
       if (playlistTracks.length < 20) {
-        const allMoodTracks = TRACK_CATALOG.filter(t => 
-          t.moods.includes(selectedMood) && 
-          !playlistTracks.find(pt => pt.id === t.id)
+        const remaining = TRACK_CATALOG.filter(t => 
+          t.moods.includes(selectedMood) && !playlistTracks.find(pt => pt.id === t.id)
         );
-        playlistTracks.push(...shuffleArray(allMoodTracks).slice(0, 20 - playlistTracks.length));
+        playlistTracks.push(...shuffleArray(remaining).slice(0, 20 - playlistTracks.length));
       }
 
-      // Si aún no llegamos a 20, usar todo el catálogo
-      if (playlistTracks.length < 20) {
-        const allRemaining = TRACK_CATALOG.filter(t => 
-          !playlistTracks.find(pt => pt.id === t.id)
-        );
-        playlistTracks.push(...shuffleArray(allRemaining).slice(0, 20 - playlistTracks.length));
-      }
-
-      // Shuffle final para mezclar conocidas y nuevas
+      // Shuffle final
       playlistTracks = shuffleArray(playlistTracks).slice(0, targetSize);
 
       const mockTracks = playlistTracks.map(t => ({
