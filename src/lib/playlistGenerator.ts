@@ -119,6 +119,15 @@ export function generateSmartPlaylist(
 
     // === PUNTUACIÓN POR ANÁLISIS VISUAL (si hay foto) ===
     if (photoAnalysis) {
+      // Normalize dominantColors to always be an array
+      const domColors = Array.isArray(photoAnalysis.dominantColors)
+        ? photoAnalysis.dominantColors
+        : typeof photoAnalysis.dominantColors === "string" && photoAnalysis.dominantColors
+          ? [photoAnalysis.dominantColors]
+          : [];
+      const validScene = photoAnalysis.scene && photoAnalysis.scene !== "undefined" ? photoAnalysis.scene : null;
+      const validMood = photoAnalysis.mood && photoAnalysis.mood !== "undefined" ? photoAnalysis.mood : null;
+
       const sceneToMoment: Record<string, string[]> = {
         beach: ["vacaciones"],
         city: ["noche", "fiesta"],
@@ -132,9 +141,11 @@ export function generateSmartPlaylist(
         indoor: ["tranquilo", "noche"],
       };
 
-      const relatedMoments = sceneToMoment[photoAnalysis.scene] || [];
-      if (track.moment_types?.some((mt) => relatedMoments.includes(mt))) {
-        score += 2;
+      if (validScene) {
+        const relatedMoments = sceneToMoment[validScene] || [];
+        if (track.moment_types?.some((mt) => relatedMoments.includes(mt))) {
+          score += 2;
+        }
       }
 
       const photoMoodToTrackMoods: Record<string, string[]> = {
@@ -147,23 +158,25 @@ export function generateSmartPlaylist(
         adventurous: ["libre", "motivado", "feliz"],
       };
 
-      const relatedMoods = photoMoodToTrackMoods[photoAnalysis.mood] || [];
-      if (track.moods.some((m) => relatedMoods.includes(m))) {
-        score += 2;
+      if (validMood) {
+        const relatedMoods = photoMoodToTrackMoods[validMood] || [];
+        if (track.moods.some((m) => relatedMoods.includes(m))) {
+          score += 2;
+        }
       }
 
       if (track.energy) {
-        const energyDiff = Math.abs(track.energy - photoAnalysis.energy);
+        const energyDiff = Math.abs(track.energy - (photoAnalysis.energy || 5));
         if (energyDiff <= 2) score += 2;
         else if (energyDiff <= 4) score += 1;
       }
 
-      if (track.visualScenes?.includes(photoAnalysis.scene)) {
+      if (validScene && track.visualScenes?.includes(validScene)) {
         score += 2;
       }
 
-      if (track.colorVibes && photoAnalysis.dominantColors) {
-        const matchingColors = track.colorVibes.filter((c) => photoAnalysis.dominantColors.includes(c));
+      if (track.colorVibes && domColors.length > 0) {
+        const matchingColors = track.colorVibes.filter((c) => domColors.includes(c));
         score += matchingColors.length * 0.5;
       }
 
