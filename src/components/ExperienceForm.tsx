@@ -10,6 +10,7 @@ import { ArtistSearch } from "./fryda/ArtistSearch";
 import { DiscoverySlider } from "./fryda/DiscoverySlider";
 import { FormSection } from "./fryda/FormSection";
 import { GenerateButton } from "./fryda/GenerateButton";
+import { PlaylistLoader } from "./fryda/PlaylistLoader";
 
 interface ExperienceFormProps {
   onPlaylistGenerated: (playlistId: string) => void;
@@ -40,6 +41,24 @@ const MOMENTS = [
   { id: "evento", label: "Evento", emoji: "📸" },
 ];
 
+// Compress image to max 1200px and JPEG 0.7 quality
+function resizeImage(base64: string, maxWidth = 1200, quality = 0.7): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = img.width > maxWidth ? maxWidth / img.width : 1;
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => resolve(base64); // fallback to original
+    img.src = base64;
+  });
+}
+
 export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => {
   const [selectedMood, setSelectedMood] = useState("");
   const [selectedMomentType, setSelectedMomentType] = useState("");
@@ -57,14 +76,15 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
 
     const reader = new FileReader();
     reader.onloadend = async () => {
-      const base64 = reader.result as string;
-      setPhotoPreview(base64);
+      const raw = reader.result as string;
+      const compressed = await resizeImage(raw);
+      setPhotoPreview(compressed);
 
       setAnalyzingPhoto(true);
       try {
         const { data, error } = await supabase.functions.invoke("analyze-photo", {
           body: {
-            photoBase64: base64,
+            photoBase64: compressed,
             selectedMood,
             selectedMomentType,
             selectedTags,
@@ -74,6 +94,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
 
         if (error) {
           console.error("Error analizando foto:", error);
+          toast.error("No se pudo analizar la foto. Puedes continuar sin ella.");
         } else if (data?.photoAnalysis) {
           setPhotoAnalysis(data.photoAnalysis);
           const insight = getPhotoInsight(data.photoAnalysis);
@@ -84,6 +105,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         }
       } catch (err) {
         console.error("Error en análisis:", err);
+        toast.error("Error al analizar la foto. Puedes continuar sin ella.");
       } finally {
         setAnalyzingPhoto(false);
       }
@@ -109,6 +131,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
       let currentPhotoAnalysis = photoAnalysis;
       let musicProfile: MusicProfile | null = null;
 
+      // If photo exists but wasn't analyzed yet, analyze now
       if (photoPreview && !photoAnalysis) {
         toast.info("Analizando tu foto...");
         try {
@@ -170,9 +193,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         localStorage.setItem("fryda_experiences", JSON.stringify(experiences));
       } catch {
         const trimmed = experiences.slice(-20);
-        try {
-          localStorage.setItem("fryda_experiences", JSON.stringify(trimmed));
-        } catch {}
+        try { localStorage.setItem("fryda_experiences", JSON.stringify(trimmed)); } catch {}
       }
 
       const playlistId = Date.now().toString();
@@ -196,9 +217,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         localStorage.setItem("fryda_playlists", JSON.stringify(playlists));
       } catch {
         const trimmed = playlists.slice(-50);
-        try {
-          localStorage.setItem("fryda_playlists", JSON.stringify(trimmed));
-        } catch {}
+        try { localStorage.setItem("fryda_playlists", JSON.stringify(trimmed)); } catch {}
       }
 
       const tracks = tracksToSave.map((track, index) => ({
@@ -214,10 +233,11 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         localStorage.setItem("fryda_tracks", JSON.stringify(allTracks));
       } catch {
         const trimmed = allTracks.slice(-2000);
-        try {
-          localStorage.setItem("fryda_tracks", JSON.stringify(trimmed));
-        } catch {}
+        try { localStorage.setItem("fryda_tracks", JSON.stringify(trimmed)); } catch {}
       }
+
+      // Wait a moment so the loader animation feels complete
+      await new Promise((r) => setTimeout(r, 800));
 
       const insight = currentPhotoAnalysis ? getPhotoInsight(currentPhotoAnalysis) : null;
       toast.success(insight ? `¡Playlist creada! ${insight}` : "¡Playlist generada con éxito!");
@@ -239,14 +259,14 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
     }
   };
 
+  // Show loader when generating
+  if (loading) {
+    return <PlaylistLoader hasPhoto={!!photoPreview} />;
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Photo Upload */}
-      <FormSection
-        step={1}
-        title="Sube una foto"
-        subtitle="La IA analizará los colores, escenas y emociones"
-      >
+      <FormSection step={1} title="Sube una foto" subtitle="La IA analizará los colores, escenas y emociones">
         <PhotoUpload
           photoPreview={photoPreview}
           photoInsight={photoInsight}
@@ -256,30 +276,15 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         />
       </FormSection>
 
-      {/* Mood Selection */}
-      <FormSection
-        step={2}
-        title="¿Cómo te sentías?"
-        subtitle="Elige la emoción que mejor describe ese momento"
-      >
+      <FormSection step={2} title="¿Cómo te sentías?" subtitle="Elige la emoción que mejor describe ese momento">
         <MoodSelector moods={MOODS} selected={selectedMood} onSelect={setSelectedMood} />
       </FormSection>
 
-      {/* Moment Type */}
-      <FormSection
-        step={3}
-        title="¿Qué tipo de momento era?"
-        subtitle="Opcional - ayuda a afinar las recomendaciones"
-      >
+      <FormSection step={3} title="¿Qué tipo de momento era?" subtitle="Opcional - ayuda a afinar las recomendaciones">
         <MomentSelector moments={MOMENTS} selected={selectedMomentType} onSelect={setSelectedMomentType} />
       </FormSection>
 
-      {/* Artist/Song Search */}
-      <FormSection
-        step={4}
-        title="Canciones o artistas que recuerdes"
-        subtitle="Opcional - usaremos tu gusto musical para personalizar"
-      >
+      <FormSection step={4} title="Canciones o artistas que recuerdes" subtitle="Opcional - usaremos tu gusto musical para personalizar">
         <ArtistSearch
           selectedTags={selectedTags}
           onAddTag={(tag) => setSelectedTags([...selectedTags, tag])}
@@ -287,16 +292,10 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         />
       </FormSection>
 
-      {/* Discovery Slider */}
-      <FormSection
-        step={5}
-        title="Balance musical"
-        subtitle="¿Más favoritos conocidos o descubrir música nueva?"
-      >
+      <FormSection step={5} title="Balance musical" subtitle="¿Más favoritos conocidos o descubrir música nueva?">
         <DiscoverySlider value={newMusicPercentage} onChange={setNewMusicPercentage} />
       </FormSection>
 
-      {/* Submit Button */}
       <div className="pt-4">
         <GenerateButton isLoading={loading} disabled={!selectedMood} />
       </div>
