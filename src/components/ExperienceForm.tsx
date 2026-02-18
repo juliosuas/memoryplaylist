@@ -207,6 +207,9 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         experience_id: experienceId,
         name: playlistName,
         emotion: selectedMood,
+        moment_type: selectedMomentType,
+        new_music_percentage: newMusicPercentage[0],
+        tags: selectedTags,
         photo_analysis: currentPhotoAnalysis,
         created_at: new Date().toISOString(),
       };
