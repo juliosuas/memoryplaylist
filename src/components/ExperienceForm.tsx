@@ -239,8 +239,8 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         try { localStorage.setItem("fryda_tracks", JSON.stringify(trimmed)); } catch {}
       }
 
-      // Wait so the loader animation feels complete (song counter + confetti need ~4s)
-      await new Promise((r) => setTimeout(r, 4000));
+      // Long dramatic wait so the loader builds suspense before revealing the playlist
+      await new Promise((r) => setTimeout(r, 8000));
 
       const insight = currentPhotoAnalysis ? getPhotoInsight(currentPhotoAnalysis) : null;
       toast.success(insight ? `¡Playlist creada! ${insight}` : "¡Playlist generada con éxito!");

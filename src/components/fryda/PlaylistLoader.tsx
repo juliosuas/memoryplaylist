@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Heart, Music } from "lucide-react";
-import confetti from "canvas-confetti";
 
 const PHASES = [
   { message: "Analizando tu foto...", emoji: "📸", sub: "Detectando emociones y ambiente" },
@@ -40,32 +39,32 @@ export const PlaylistLoader = ({ hasPhoto }: PlaylistLoaderProps) => {
   const [displayedText, setDisplayedText] = useState("");
   const [typingIndex, setTypingIndex] = useState(0);
   const [songsFound, setSongsFound] = useState(0);
-  const [confettiFired, setConfettiFired] = useState(false);
-  const confettiRef = useRef(false);
+  
 
-  // Progress + song counter
+  // Progress + song counter — slow & dramatic (~8s to reach 95%)
   useEffect(() => {
     if (!hasPhoto) setPhaseIndex(1);
 
     const progressInterval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 95) return 95;
-        const increment = prev < 30 ? 3 : prev < 60 ? 2 : 0.8;
+        // Very slow ramp: takes ~8s to reach 95
+        const increment = prev < 20 ? 0.8 : prev < 50 ? 0.5 : prev < 80 ? 0.35 : 0.18;
         return Math.min(95, prev + increment);
       });
     }, 80);
 
     const phaseInterval = setInterval(() => {
       setPhaseIndex((prev) => Math.min(prev + 1, PHASES.length - 1));
-    }, 1800);
+    }, 2000);
 
-    // Song counter: ramp up to TARGET_SONGS in sync with progress
+    // Song counter: ramp up slowly over ~6.5s
     const songInterval = setInterval(() => {
       setSongsFound((prev) => {
         if (prev >= TARGET_SONGS) return TARGET_SONGS;
         return prev + 1;
       });
-    }, 320);
+    }, 340);
 
     return () => {
       clearInterval(progressInterval);
@@ -90,52 +89,6 @@ export const PlaylistLoader = ({ hasPhoto }: PlaylistLoaderProps) => {
     return () => clearTimeout(t);
   }, [typingIndex, phaseIndex]);
 
-  // Confetti at 95%
-  useEffect(() => {
-    if (progress >= 95 && !confettiRef.current) {
-      confettiRef.current = true;
-      setConfettiFired(true);
-
-      const duration = 2200;
-      const end = Date.now() + duration;
-
-      const colors = ["#ff6b6b", "#ff8c42", "#ff6bbc", "#ffd93d", "#ffffff", "#ff4f79"];
-
-      const frame = () => {
-        confetti({
-          particleCount: 6,
-          angle: 60,
-          spread: 70,
-          origin: { x: 0, y: 0.6 },
-          colors,
-          zIndex: 9999,
-          scalar: 1.1,
-        });
-        confetti({
-          particleCount: 6,
-          angle: 120,
-          spread: 70,
-          origin: { x: 1, y: 0.6 },
-          colors,
-          zIndex: 9999,
-          scalar: 1.1,
-        });
-        if (Date.now() < end) requestAnimationFrame(frame);
-      };
-      frame();
-
-      // Burst from center
-      confetti({
-        particleCount: 80,
-        spread: 100,
-        origin: { x: 0.5, y: 0.55 },
-        colors,
-        zIndex: 9999,
-        scalar: 1.3,
-        startVelocity: 35,
-      });
-    }
-  }, [progress]);
 
   const currentPhase = PHASES[phaseIndex];
   const isComplete = songsFound >= TARGET_SONGS;
