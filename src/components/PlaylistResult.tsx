@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Music, Heart, Sparkles, ArrowLeft, Play, ExternalLink } from "lucide-react";
+import { SharePlaylist } from "@/components/fryda/SharePlaylist";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -262,6 +263,7 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
         <Button onClick={openYouTubePlaylist} className="flex-1 gap-2 h-12 rounded-xl bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity">
           <Play className="w-4 h-4" /> Reproducir en YouTube
         </Button>
+        <SharePlaylist playlist={playlist} tracks={tracks} config={config} />
       </div>
 
       {/* Track list */}
