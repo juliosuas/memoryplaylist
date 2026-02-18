@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Music, Heart, Sparkles, ArrowLeft, Play, ExternalLink } from "lucide-react";
+import { Music, Heart, Sparkles, ArrowLeft, ExternalLink } from "lucide-react";
 import { SharePlaylist } from "@/components/fryda/SharePlaylist";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import confetti from "canvas-confetti";
 
 interface Track {
   id: string;
@@ -171,6 +172,24 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
     setLoading(false);
   }, [playlistId]);
 
+  // 🎉 Confetti celebration the moment results appear
+  useEffect(() => {
+    const colors = ["#ff6b6b", "#ff8c42", "#ff6bbc", "#ffd93d", "#ffffff", "#ff4f79"];
+    const duration = 3000;
+    const end = Date.now() + duration;
+
+    // Burst from center
+    confetti({ particleCount: 100, spread: 120, origin: { x: 0.5, y: 0.6 }, colors, zIndex: 9999, scalar: 1.3, startVelocity: 40 });
+
+    // Side streams
+    const frame = () => {
+      confetti({ particleCount: 5, angle: 60,  spread: 65, origin: { x: 0,   y: 0.65 }, colors, zIndex: 9999 });
+      confetti({ particleCount: 5, angle: 120, spread: 65, origin: { x: 1,   y: 0.65 }, colors, zIndex: 9999 });
+      if (Date.now() < end) requestAnimationFrame(frame);
+    };
+    frame();
+  }, []);
+
   const handleLike = (track: Track) => {
     const prefs = JSON.parse(localStorage.getItem("fryda_preferences") || "[]");
     prefs.push({ id: Date.now().toString(), track_name: track.track_name, artist: track.artist, liked: true, created_at: new Date().toISOString() });
@@ -182,8 +201,33 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
     const ids = tracks.map((t) => (t as any).youtubeId).filter(Boolean);
     if (ids.length) {
       window.open(`https://www.youtube.com/watch_videos?video_ids=${ids.join(",")}`, "_blank");
-      toast.success("¡Playlist abierta en YouTube!");
+    } else {
+      // Fallback: search first track on YouTube
+      const first = tracks[0];
+      if (first) window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(`${first.track_name} ${first.artist}`)}`, "_blank");
     }
+    toast.success("¡Abriendo en YouTube!");
+  };
+
+  const openSpotifyPlaylist = () => {
+    const query = tracks.slice(0, 1).map((t) => `${t.track_name} ${t.artist}`).join(" ");
+    window.open(`https://open.spotify.com/search/${encodeURIComponent(query)}`, "_blank");
+    // Open extra tracks with delay to avoid popup blocker
+    tracks.slice(1, 8).forEach((t, i) => {
+      setTimeout(() => {
+        window.open(`https://open.spotify.com/search/${encodeURIComponent(`${t.track_name} ${t.artist}`)}`, "_blank");
+      }, (i + 1) * 350);
+    });
+    toast.success("¡Abriendo en Spotify!");
+  };
+
+  const openAppleMusicPlaylist = () => {
+    tracks.slice(0, 8).forEach((t, i) => {
+      setTimeout(() => {
+        window.open(`https://music.apple.com/search?term=${encodeURIComponent(`${t.track_name} ${t.artist}`)}`, "_blank");
+      }, i * 350);
+    });
+    toast.success("¡Abriendo en Apple Music!");
   };
 
   const openSpotifySearch = (track: Track) => {
@@ -258,11 +302,36 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
         </div>
       )}
 
-      {/* Action buttons */}
-      <div className="flex gap-2">
-        <Button onClick={openYouTubePlaylist} className="flex-1 gap-2 h-12 rounded-xl bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity">
-          <Play className="w-4 h-4" /> Reproducir en YouTube
-        </Button>
+      {/* Action buttons — music services */}
+      <div className="space-y-2">
+        {/* Primary row */}
+        <div className="grid grid-cols-3 gap-2">
+          <Button
+            onClick={openYouTubePlaylist}
+            className="flex-1 gap-2 h-12 rounded-xl text-white font-semibold"
+            style={{ background: "#FF0000" }}
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+            YouTube
+          </Button>
+          <Button
+            onClick={openSpotifyPlaylist}
+            className="flex-1 gap-2 h-12 rounded-xl text-white font-semibold"
+            style={{ background: "#1DB954" }}
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+            Spotify
+          </Button>
+          <Button
+            onClick={openAppleMusicPlaylist}
+            className="flex-1 gap-2 h-12 rounded-xl text-white font-semibold"
+            style={{ background: "linear-gradient(135deg, #fc3c44, #f91c5c)" }}
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M23.994 6.124a9.23 9.23 0 0 0-.22-2.19c-.31-1.335-1.05-2.32-2.19-2.91-.7-.36-1.45-.52-2.21-.57-.76-.05-1.52-.04-2.28-.04H6.896c-.76 0-1.52-.01-2.28.04-.76.05-1.51.21-2.21.57C1.266 1.614.526 2.599.216 3.934c-.15.64-.21 1.29-.22 1.95A74.4 74.4 0 0 0-.006 7.9v8.2c0 .59.01 1.18.03 1.77.01.66.07 1.31.22 1.95.31 1.335 1.05 2.32 2.19 2.91.7.36 1.45.52 2.21.57.76.05 1.52.04 2.28.04H17.1c.76 0 1.52.01 2.28-.04.76-.05 1.51-.21 2.21-.57 1.14-.59 1.88-1.575 2.19-2.91.15-.64.21-1.29.22-1.95.02-.59.03-1.18.03-1.77V7.9c0-.59-.01-1.18-.03-1.77zM15.5 15.5h-1.75V10h-3.5v5.5H8.5V7.5h1.75v1a3 3 0 0 1 2.5-1.25A2.75 2.75 0 0 1 15.5 10v5.5z"/></svg>
+            Apple Music
+          </Button>
+        </div>
+        {/* Share button full-width */}
         <SharePlaylist playlist={playlist} tracks={tracks} config={config} />
       </div>
 
