@@ -133,6 +133,36 @@ export default {
           "0%, 100%": { transform: "translateY(0)" },
           "50%": { transform: "translateY(-8px)" },
         },
+        "float-slow": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-12px)" },
+        },
+        "float-fast": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-5px)" },
+        },
+        "float-note": {
+          "0%": { transform: "translateY(0) rotate(-5deg)", opacity: "0" },
+          "10%": { opacity: "0.85" },
+          "90%": { opacity: "0.7" },
+          "100%": { transform: "translateY(-110vh) rotate(10deg)", opacity: "0" },
+        },
+        "bounce-note": {
+          "0%, 100%": { transform: "translateY(0) scale(1)" },
+          "50%": { transform: "translateY(-8px) scale(1.15)" },
+        },
+        "ping-slow": {
+          "0%": { transform: "scale(1)", opacity: "0.6" },
+          "100%": { transform: "scale(1.6)", opacity: "0" },
+        },
+        "spin-slow": {
+          from: { transform: "rotate(0deg)" },
+          to: { transform: "rotate(360deg)" },
+        },
+        "gradient-shift": {
+          "0%, 100%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
+        },
         shimmer: {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
@@ -147,7 +177,14 @@ export default {
         "slide-up": "slide-up 0.4s ease-out forwards",
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
         float: "float 3s ease-in-out infinite",
-        shimmer: "shimmer 2s infinite",
+        "float-slow": "float-slow 5s ease-in-out infinite",
+        "float-fast": "float-fast 2s ease-in-out infinite",
+        "float-note": "float-note 4s ease-in-out infinite",
+        "bounce-note": "bounce-note 1.5s ease-in-out infinite",
+        "ping-slow": "ping-slow 2.4s ease-out infinite",
+        "spin-slow": "spin-slow 8s linear infinite",
+        "gradient-shift": "gradient-shift 6s ease infinite",
+        shimmer: "shimmer 1.5s infinite",
       },
       backgroundImage: {
         "gradient-primary": "var(--gradient-primary)",
