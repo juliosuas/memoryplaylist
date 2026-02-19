@@ -3,8 +3,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { generateSmartPlaylist, getPhotoInsight, PhotoAnalysis, MusicProfile } from "@/lib/playlistGenerator";
 
-import { MoodSelector, MOOD_ICONS } from "./fryda/MoodSelector";
-import { MomentSelector, MOMENT_ICONS } from "./fryda/MomentSelector";
+import { MoodSelector } from "./fryda/MoodSelector";
+import { MomentSelector } from "./fryda/MomentSelector";
 import { PhotoUpload } from "./fryda/PhotoUpload";
 import { ArtistSearch } from "./fryda/ArtistSearch";
 import { DiscoverySlider } from "./fryda/DiscoverySlider";
@@ -17,28 +17,28 @@ interface ExperienceFormProps {
 }
 
 const MOODS = [
-  { id: "enamorado",   label: "Enamorado",   icon: MOOD_ICONS["enamorado"].icon,   color: MOOD_ICONS["enamorado"].color },
-  { id: "nostálgico",  label: "Nostálgico",  icon: MOOD_ICONS["nostálgico"].icon,  color: MOOD_ICONS["nostálgico"].color },
-  { id: "feliz",       label: "Feliz",       icon: MOOD_ICONS["feliz"].icon,       color: MOOD_ICONS["feliz"].color },
-  { id: "relajado",    label: "Relajado",    icon: MOOD_ICONS["relajado"].icon,    color: MOOD_ICONS["relajado"].color },
-  { id: "nervioso",    label: "Nervioso",    icon: MOOD_ICONS["nervioso"].icon,    color: MOOD_ICONS["nervioso"].color },
-  { id: "triste",      label: "Triste",      icon: MOOD_ICONS["triste"].icon,      color: MOOD_ICONS["triste"].color },
-  { id: "reflexivo",   label: "Reflexivo",   icon: MOOD_ICONS["reflexivo"].icon,   color: MOOD_ICONS["reflexivo"].color },
-  { id: "motivado",    label: "Motivado",    icon: MOOD_ICONS["motivado"].icon,    color: MOOD_ICONS["motivado"].color },
-  { id: "rapero",      label: "Rapero",      icon: MOOD_ICONS["rapero"].icon,      color: MOOD_ICONS["rapero"].color },
-  { id: "esperanzado", label: "Esperanzado", icon: MOOD_ICONS["esperanzado"].icon, color: MOOD_ICONS["esperanzado"].color },
-  { id: "libre",       label: "Libre",       icon: MOOD_ICONS["libre"].icon,       color: MOOD_ICONS["libre"].color },
+  { id: "enamorado", label: "Enamorado", emoji: "❤️" },
+  { id: "nostálgico", label: "Nostálgico", emoji: "🥲" },
+  { id: "feliz", label: "Feliz", emoji: "😀" },
+  { id: "relajado", label: "Relajado", emoji: "😌" },
+  { id: "nervioso", label: "Nervioso", emoji: "😬" },
+  { id: "triste", label: "Triste", emoji: "😢" },
+  { id: "reflexivo", label: "Reflexivo", emoji: "💭" },
+  { id: "motivado", label: "Motivado", emoji: "💪" },
+  { id: "rapero", label: "Rapero", emoji: "🎤" },
+  { id: "esperanzado", label: "Esperanzado", emoji: "🌈" },
+  { id: "libre", label: "Libre", emoji: "😎" },
 ];
 
 const MOMENTS = [
-  { id: "vacaciones",  label: "Vacaciones",     icon: MOMENT_ICONS["vacaciones"] },
-  { id: "fiesta",      label: "Fiesta",          icon: MOMENT_ICONS["fiesta"] },
-  { id: "tranquilo",   label: "Día tranquilo",   icon: MOMENT_ICONS["tranquilo"] },
-  { id: "despedida",   label: "Despedida",       icon: MOMENT_ICONS["despedida"] },
-  { id: "concierto",   label: "Concierto",       icon: MOMENT_ICONS["concierto"] },
-  { id: "noche",       label: "Noche especial",  icon: MOMENT_ICONS["noche"] },
-  { id: "inspiracion", label: "Inspiración",     icon: MOMENT_ICONS["inspiracion"] },
-  { id: "evento",      label: "Evento",          icon: MOMENT_ICONS["evento"] },
+  { id: "vacaciones", label: "Vacaciones", emoji: "🏖️" },
+  { id: "fiesta", label: "Fiesta", emoji: "💃" },
+  { id: "tranquilo", label: "Día tranquilo", emoji: "🏡" },
+  { id: "despedida", label: "Despedida", emoji: "💔" },
+  { id: "concierto", label: "Concierto", emoji: "🎶" },
+  { id: "noche", label: "Noche especial", emoji: "🌃" },
+  { id: "inspiracion", label: "Inspiración", emoji: "💡" },
+  { id: "evento", label: "Evento", emoji: "📸" },
 ];
 
 // Compress image to max 1200px and JPEG 0.7 quality
@@ -197,9 +197,10 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
       }
 
       const playlistId = Date.now().toString();
+      const moodLabel = MOODS.find((m) => m.id === selectedMood)?.emoji || "";
       const playlistName = currentPhotoAnalysis
-        ? `${selectedMood} · ${getPhotoInsight(currentPhotoAnalysis)?.split(" ").slice(0, 3).join(" ") || selectedMood}`
-        : `Playlist · ${selectedMood}`;
+        ? `${moodLabel} ${selectedMood} • ${getPhotoInsight(currentPhotoAnalysis)?.split(" ").slice(0, 2).join(" ") || "📸"}`
+        : `${moodLabel} Playlist ${selectedMood}`;
 
       const playlist = {
         id: playlistId,

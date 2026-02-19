@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Music, Heart, Sparkles, ArrowLeft, ExternalLink, Flame, Wind, CloudRain, Moon, Mic2, Leaf, Sun, Zap, Sunset } from "lucide-react";
+import { Music, Heart, Sparkles, ArrowLeft, ExternalLink } from "lucide-react";
 import { SharePlaylist } from "@/components/fryda/SharePlaylist";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -21,63 +21,63 @@ interface PlaylistResultProps {
   onBack: () => void;
 }
 
-const EMOTION_CONFIG: Record<string, { icon: React.ElementType; gradient: string; gradientFrom: string; gradientTo: string }> = {
-  enamorado:   { icon: Heart,     gradient: "from-rose-500 to-pink-500",    gradientFrom: "#f43f5e", gradientTo: "#ec4899" },
-  nostálgico:  { icon: Sunset,    gradient: "from-amber-500 to-orange-500", gradientFrom: "#f59e0b", gradientTo: "#f97316" },
-  feliz:       { icon: Sun,       gradient: "from-yellow-400 to-orange-400",gradientFrom: "#facc15", gradientTo: "#fb923c" },
-  relajado:    { icon: Wind,      gradient: "from-teal-400 to-cyan-400",    gradientFrom: "#2dd4bf", gradientTo: "#22d3ee" },
-  nervioso:    { icon: Zap,       gradient: "from-purple-500 to-violet-500",gradientFrom: "#a855f7", gradientTo: "#8b5cf6" },
-  triste:      { icon: CloudRain, gradient: "from-blue-500 to-indigo-500",  gradientFrom: "#3b82f6", gradientTo: "#6366f1" },
-  reflexivo:   { icon: Moon,      gradient: "from-slate-500 to-gray-500",   gradientFrom: "#64748b", gradientTo: "#6b7280" },
-  motivado:    { icon: Flame,     gradient: "from-red-500 to-orange-500",   gradientFrom: "#ef4444", gradientTo: "#f97316" },
-  rapero:      { icon: Mic2,      gradient: "from-zinc-700 to-gray-600",    gradientFrom: "#3f3f46", gradientTo: "#4b5563" },
-  esperanzado: { icon: Leaf,      gradient: "from-green-400 to-emerald-400",gradientFrom: "#4ade80", gradientTo: "#34d399" },
-  libre:       { icon: Sun,       gradient: "from-sky-400 to-blue-500",     gradientFrom: "#38bdf8", gradientTo: "#3b82f6" },
+const EMOTION_CONFIG: Record<string, { emoji: string; gradient: string; gradientFrom: string; gradientTo: string }> = {
+  enamorado: { emoji: "❤️", gradient: "from-rose-500 to-pink-500", gradientFrom: "#f43f5e", gradientTo: "#ec4899" },
+  nostálgico: { emoji: "🥲", gradient: "from-amber-500 to-orange-500", gradientFrom: "#f59e0b", gradientTo: "#f97316" },
+  feliz: { emoji: "😀", gradient: "from-yellow-400 to-orange-400", gradientFrom: "#facc15", gradientTo: "#fb923c" },
+  relajado: { emoji: "😌", gradient: "from-teal-400 to-cyan-400", gradientFrom: "#2dd4bf", gradientTo: "#22d3ee" },
+  nervioso: { emoji: "😬", gradient: "from-purple-500 to-violet-500", gradientFrom: "#a855f7", gradientTo: "#8b5cf6" },
+  triste: { emoji: "😢", gradient: "from-blue-500 to-indigo-500", gradientFrom: "#3b82f6", gradientTo: "#6366f1" },
+  reflexivo: { emoji: "💭", gradient: "from-slate-500 to-gray-500", gradientFrom: "#64748b", gradientTo: "#6b7280" },
+  motivado: { emoji: "💪", gradient: "from-red-500 to-orange-500", gradientFrom: "#ef4444", gradientTo: "#f97316" },
+  rapero: { emoji: "🎤", gradient: "from-zinc-700 to-gray-600", gradientFrom: "#3f3f46", gradientTo: "#4b5563" },
+  esperanzado: { emoji: "🌈", gradient: "from-green-400 to-emerald-400", gradientFrom: "#4ade80", gradientTo: "#34d399" },
+  libre: { emoji: "😎", gradient: "from-sky-400 to-blue-500", gradientFrom: "#38bdf8", gradientTo: "#3b82f6" },
 };
 
 const CLOSING_MESSAGES: Record<string, { title: string; body: string }> = {
   enamorado: {
-    title: "El amor tiene su propia banda sonora",
+    title: "El amor tiene su propia banda sonora 💕",
     body: "Estas canciones guardan la esencia de ese sentimiento. Vuelve a escucharlas cuando quieras revivir ese momento tan especial.",
   },
   nostálgico: {
-    title: "Los recuerdos suenan mejor con música",
+    title: "Los recuerdos suenan mejor con música 🌅",
     body: "Hay algo mágico en cómo una canción puede transportarte de regreso a un momento exacto. Cuida estos recuerdos, son tuyos para siempre.",
   },
   feliz: {
-    title: "La felicidad se siente doble con la canción perfecta",
+    title: "La felicidad se siente doble con la canción perfecta 😊",
     body: "La música que te hace sonreír siempre estará aquí. Vuelve cuando quieras revivir este momento tan luminoso.",
   },
   relajado: {
-    title: "Este es tu momento de paz",
+    title: "Respira profundo, este es tu momento de paz 🍃",
     body: "Estas canciones son tu refugio. Guárdalas para esos instantes en que necesitas desconectarte del mundo.",
   },
   nervioso: {
-    title: "La música puede calmar hasta el corazón más inquieto",
+    title: "La música puede calmar hasta el corazón más inquieto 💜",
     body: "Deja que estas canciones te acompañen y recuerda: todo pasa. Este momento también.",
   },
   triste: {
-    title: "A veces la música nos entiende mejor que nadie",
-    body: "Está bien sentir. La música no juzga, solo acompaña. Esperamos que estas canciones te hagan sentir un poco menos solo.",
+    title: "A veces la música nos entiende mejor que nadie 💙",
+    body: "Está bien sentir. La música no juzga, solo acompaña. Esperamos que estas canciones te hagan sentir un poco menos solo/a.",
   },
   reflexivo: {
-    title: "Los grandes pensamientos merecen grandes canciones",
+    title: "Los grandes pensamientos merecen grandes canciones 🌙",
     body: "Dale espacio a tu mente para procesar, crear y soñar. Estas melodías son el fondo perfecto para tus reflexiones más profundas.",
   },
   motivado: {
-    title: "Nada puede detenerte con esta energía",
-    body: "Llevas dentro todo lo que necesitas. Esta playlist es el combustible para que lo demuestres.",
+    title: "Nada puede detenerte con esta energía 🔥",
+    body: "Llevas dentro todo lo que necesitas. Esta playlist es el combustible para que lo demuestres. ¡A por todas!",
   },
   rapero: {
-    title: "Las mejores rimas nacen de los sentimientos más reales",
+    title: "Las mejores rimas nacen de los sentimientos más reales 🎤",
     body: "Cada beat es una historia, cada canción un capítulo. Sigue creando, sigue fluyendo.",
   },
   esperanzado: {
-    title: "El futuro suena increíble desde aquí",
+    title: "El futuro suena increíble desde aquí 🌈",
     body: "Hay algo hermoso en creer que lo mejor está por venir. Estas canciones son el soundtrack de tus sueños más grandes.",
   },
   libre: {
-    title: "La aventura suena mejor con la música correcta",
+    title: "La aventura suena mejor con la música correcta 🌊",
     body: "El mundo es tuyo para explorarlo. Estas canciones son tus compañeras perfectas en cada camino que elijas tomar.",
   },
 };
@@ -251,7 +251,7 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
     );
   }
 
-  const config = EMOTION_CONFIG[playlist.emotion] || { icon: Music, gradient: "from-primary to-accent", gradientFrom: "", gradientTo: "" };
+  const config = EMOTION_CONFIG[playlist.emotion] || { emoji: "🎵", gradient: "from-primary to-accent", gradientFrom: "", gradientTo: "" };
   const newCount = tracks.filter((t) => t.is_new_discovery).length;
   const description = buildDescription(playlist);
   const closing = CLOSING_MESSAGES[playlist.emotion];
@@ -280,13 +280,10 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
             animation: "shimmer 2.5s infinite",
           }}
         />
-        <div className="relative z-10 space-y-3 flex flex-col items-center">
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center"
-            style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.3)", animation: "float 3s ease-in-out infinite" }}
-          >
-            {(() => { const Icon = config.icon; return <Icon className="w-8 h-8 text-white" strokeWidth={1.5} />; })()}
-          </div>
+        <div className="relative z-10 space-y-3">
+          <span className="text-5xl drop-shadow-lg" style={{ animation: "float 3s ease-in-out infinite" }}>
+            {config.emoji}
+          </span>
           <h2 className="text-2xl font-bold text-white capitalize">{playlist.emotion}</h2>
           <p className="text-white/80 text-sm">{tracks.length} canciones • {newCount} descubrimientos</p>
         </div>
