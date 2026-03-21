@@ -1,10 +1,92 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+// ── Input Validation ─────────────────────────────────────────
+const MAX_PHOTO_BASE64_LENGTH = 15 * 1024 * 1024; // ~10MB after base64 encoding
+const MAX_MOOD_LENGTH = 50;
+const MAX_MOMENT_LENGTH = 50;
+const MAX_TAGS = 20;
+const ALLOWED_CONTENT_TYPES = ["application/json"];
+
+function validateRequest(body: any): string | null {
+  if (body.photoBase64 && typeof body.photoBase64 === "string") {
+    if (body.photoBase64.length > MAX_PHOTO_BASE64_LENGTH) {
+      return "La imagen es demasiado grande. Máximo 10 MB.";
+    }
+    // Validate it looks like a data URL or base64
+    if (!body.photoBase64.startsWith("data:image/") && !body.photoBase64.match(/^[A-Za-z0-9+/=]/)) {
+      return "Formato de imagen no válido.";
+    }
+  }
+
+  if (body.selectedMood && typeof body.selectedMood === "string") {
+    if (body.selectedMood.length > MAX_MOOD_LENGTH) {
+      return "El mood seleccionado es demasiado largo.";
+    }
+  }
+
+  if (body.selectedMomentType && typeof body.selectedMomentType === "string") {
+    if (body.selectedMomentType.length > MAX_MOMENT_LENGTH) {
+      return "El tipo de momento es demasiado largo.";
+    }
+  }
+
+  if (body.selectedTags) {
+    if (!Array.isArray(body.selectedTags)) {
+      return "Tags debe ser un array.";
+    }
+    if (body.selectedTags.length > MAX_TAGS) {
+      return `Máximo ${MAX_TAGS} tags permitidos.`;
+    }
+  }
+
+  if (body.newMusicPercentage !== undefined) {
+    const pct = Number(body.newMusicPercentage);
+    if (isNaN(pct) || pct < 0 || pct > 100) {
+      return "Porcentaje de música nueva debe estar entre 0 y 100.";
+    }
+  }
+
+  return null;
+}
+
+// ── Rate Limiting ────────────────────────────────────────────
+async function checkRateLimit(supabase: any, userId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.rpc("check_rate_limit", {
+      p_user_id: userId,
+      p_action: "analyze-photo",
+      p_max_requests: 5,
+      p_window_seconds: 60,
+    });
+    if (error) {
+      console.error("Rate limit check error:", error);
+      return true; // Allow on error (fail open)
+    }
+    return data === true;
+  } catch (err) {
+    console.error("Rate limit exception:", err);
+    return true;
+  }
+}
+
+// ── Extract user ID from JWT ─────────────────────────────────
+function extractUserId(authHeader: string | null): string | null {
+  if (!authHeader) return null;
+  try {
+    const token = authHeader.replace("Bearer ", "");
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.sub || null;
+  } catch {
+    return null;
+  }
+}
 
 interface PhotoAnalysis {
   dominantColors: string[];
@@ -46,7 +128,6 @@ function normalizeAnalysis(raw: any): PhotoAnalysis {
     return s;
   };
 
-  // Force dominantColors to array
   let colors: string[] = [];
   if (Array.isArray(raw.dominantColors)) {
     colors = raw.dominantColors.map((c: any) => String(c).toLowerCase().trim()).filter((c: string) => c && c !== "undefined");
@@ -205,7 +286,43 @@ serve(async (req) => {
   }
 
   try {
-    const { photoBase64, selectedMood, selectedMomentType, selectedTags, newMusicPercentage } = await req.json();
+    // ── Content-Type check ───────────────────────────────────
+    const contentType = req.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      return new Response(
+        JSON.stringify({ error: "Content-Type debe ser application/json" }),
+        { status: 415, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const body = await req.json();
+
+    // ── Input validation ─────────────────────────────────────
+    const validationError = validateRequest(body);
+    if (validationError) {
+      return new Response(
+        JSON.stringify({ error: validationError }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── Rate limiting ────────────────────────────────────────
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const userId = extractUserId(req.headers.get("authorization"));
+    if (userId) {
+      const allowed = await checkRateLimit(supabase, userId);
+      if (!allowed) {
+        return new Response(
+          JSON.stringify({ error: "Límite de solicitudes excedido. Máximo 5 análisis por minuto." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" } }
+        );
+      }
+    }
+
+    const { photoBase64, selectedMood, selectedMomentType, selectedTags, newMusicPercentage } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY no configurada");

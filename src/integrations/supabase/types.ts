@@ -144,6 +144,27 @@ export type Database = {
           },
         ]
       }
+      rate_limits: {
+        Row: {
+          id: string
+          user_id: string
+          action: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          action: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          action?: string
+          created_at?: string | null
+        }
+        Relationships: []
+      }
       user_profiles: {
         Row: {
           created_at: string | null
@@ -173,7 +194,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_rate_limit: {
+        Args: {
+          p_user_id: string
+          p_action: string
+          p_max_requests: number
+          p_window_seconds?: number
+        }
+        Returns: boolean
+      }
+      cleanup_rate_limits: {
+        Args: {
+          p_older_than_seconds?: number
+        }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never

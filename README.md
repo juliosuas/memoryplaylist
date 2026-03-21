@@ -1,73 +1,146 @@
-# Welcome to your Lovable project
+# 🎵 Fryda — Memory Playlist
 
-## Project info
+**Every memory has its song.**
 
-**URL**: https://lovable.dev/projects/94493fbd-cd3e-49d9-8597-832d0db55d61
+Fryda transforms your photos and memories into personalized playlists. Upload a photo, describe how you felt, and AI analyzes the visual elements — colors, scenes, mood, lighting — to generate a perfectly curated soundtrack for that moment.
 
-## How can I edit this code?
+## ✨ Features
 
-There are several ways of editing your application.
+- **📸 AI Photo Analysis** — Computer vision extracts mood, scene, lighting, colors, and energy from your photos
+- **🎭 Emotion Detection** — AI-powered emotion analysis from text descriptions
+- **🎵 Smart Playlist Generation** — 25-track playlists scored by mood, moment type, visual analysis, and genre matching
+- **🔍 Artist & Song Search** — Tag specific artists or songs to influence recommendations
+- **🎚️ Discovery Slider** — Control the balance between familiar favorites and new discoveries
+- **🌙 Dark Mode** — Full light/dark theme support
+- **📱 Mobile-First** — Responsive design optimized for mobile
+- **🎉 Celebration UI** — Confetti animations and personalized closing messages per emotion
+- **🔗 Multi-Platform Export** — Open playlists directly in YouTube, Spotify, or Apple Music
+- **📤 Share** — Share your generated playlists with friends
 
-**Use Lovable**
+## 🏗️ Architecture
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/94493fbd-cd3e-49d9-8597-832d0db55d61) and start prompting.
+### Frontend
+- **React 18** + TypeScript + Vite
+- **Tailwind CSS** + shadcn/ui components
+- **Sonner** for toast notifications
+- **canvas-confetti** for celebration effects
+- **localStorage** for client-side playlist persistence
 
-Changes made via Lovable will be committed automatically to this repo.
+### Backend (Supabase)
+- **PostgreSQL** with Row Level Security (RLS) on all tables
+- **Edge Functions** for AI analysis (photo + emotion detection)
+- **Storage Buckets** for experience photos
+- **Rate Limiting** via atomic `check_rate_limit()` function
 
-**Use your preferred IDE**
+### AI Pipeline
+- **Gemini 2.5 Flash** via Lovable AI Gateway
+- Photo → visual analysis (colors, scene, mood, energy, season, time of day)
+- Description → emotion detection (Spanish-language)
+- Combined profile → playlist scoring algorithm
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 📊 Database Schema
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+| Table | Description |
+|---|---|
+| `user_profiles` | User display names and metadata |
+| `experiences` | Photo + description entries with detected emotions |
+| `playlists` | Generated playlists linked to experiences |
+| `playlist_tracks` | Individual tracks within playlists |
+| `music_preferences` | User track likes/dislikes for personalization |
+| `rate_limits` | Request tracking for Edge Function rate limiting |
 
-Follow these steps:
+All tables have RLS enabled. Users can only access their own data.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## 🔒 Security
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+- **Row Level Security** on every table — users only see their own data
+- **Storage policies** — photos scoped to user folders
+- **Rate limiting** — analyze-photo: 5/min, analyze-emotion: 10/min per user
+- **Input validation** — server-side checks on file size (10MB), content types, text length (2000 chars), UUID format
+- **Content-Type enforcement** — Edge Functions reject non-JSON requests
 
-# Step 3: Install the necessary dependencies.
-npm i
+## 🚀 Getting Started
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+### Prerequisites
+- Node.js 18+
+- Supabase project (or local Supabase CLI)
+
+### Setup
+
+```bash
+# Clone
+git clone https://github.com/juliosuas/memoryplaylist.git
+cd memoryplaylist
+
+# Install dependencies
+npm install
+
+# Set environment variables
+cp .env.example .env.local
+# Edit .env.local with your Supabase URL and anon key
+
+# Run migrations
+npx supabase db push
+
+# Start dev server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Environment Variables
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+| Variable | Description |
+|---|---|
+| `VITE_SUPABASE_URL` | Supabase project URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/public key |
+| `LOVABLE_API_KEY` | AI Gateway key (Edge Functions) |
 
-**Use GitHub Codespaces**
+## 📁 Project Structure
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```
+src/
+├── components/
+│   ├── fryda/           # Custom Fryda components
+│   │   ├── ArtistSearch.tsx
+│   │   ├── DiscoverySlider.tsx
+│   │   ├── FormSection.tsx
+│   │   ├── GenerateButton.tsx
+│   │   ├── MomentSelector.tsx
+│   │   ├── MoodSelector.tsx
+│   │   ├── PhotoUpload.tsx
+│   │   ├── PlaylistLoader.tsx
+│   │   └── SharePlaylist.tsx
+│   ├── ui/              # shadcn/ui primitives
+│   ├── ExperienceForm.tsx
+│   ├── PlaylistResult.tsx
+│   └── SettingsDialog.tsx
+├── data/
+│   └── tracks.ts        # Track catalog with mood/genre/visual metadata
+├── integrations/
+│   └── supabase/        # Auto-generated client + types
+├── lib/
+│   ├── api.ts           # Typed API helper layer
+│   ├── error-handler.ts # Centralized bilingual error handling
+│   ├── playlistGenerator.ts  # Smart scoring algorithm
+│   └── utils.ts
+└── pages/
+    ├── Index.tsx
+    └── NotFound.tsx
 
-## What technologies are used for this project?
+supabase/
+├── functions/
+│   ├── analyze-photo/   # AI photo analysis + music profile
+│   └── analyze-emotion/ # AI emotion detection + playlist creation
+└── migrations/          # SQL migrations with RLS, indexes, rate limiting
+```
 
-This project is built with:
+## 🎨 Supported Moods
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Enamorado ❤️ · Nostálgico 🥲 · Feliz 😀 · Relajado 😌 · Nervioso 😬 · Triste 😢 · Reflexivo 💭 · Motivado 💪 · Rapero 🎤 · Esperanzado 🌈 · Libre 😎
 
-## How can I deploy this project?
+## 📄 License
 
-Simply open [Lovable](https://lovable.dev/projects/94493fbd-cd3e-49d9-8597-832d0db55d61) and click on Share -> Publish.
+Private project. All rights reserved.
 
-## Can I connect a custom domain to my Lovable project?
+---
 
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+*Built with ❤️ for reliving special moments through music.*

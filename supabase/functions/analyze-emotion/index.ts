@@ -6,13 +6,96 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// ── Input Validation ─────────────────────────────────────────
+const MAX_DESCRIPTION_LENGTH = 2000;
+const MAX_URL_LENGTH = 2048;
+
+function validateRequest(body: any): string | null {
+  if (!body.description || typeof body.description !== "string") {
+    return "La descripción es requerida.";
+  }
+  if (body.description.trim().length === 0) {
+    return "La descripción no puede estar vacía.";
+  }
+  if (body.description.length > MAX_DESCRIPTION_LENGTH) {
+    return `La descripción es demasiado larga. Máximo ${MAX_DESCRIPTION_LENGTH} caracteres.`;
+  }
+
+  if (body.photoUrl && typeof body.photoUrl === "string") {
+    if (body.photoUrl.length > MAX_URL_LENGTH) {
+      return "La URL de la foto es demasiado larga.";
+    }
+    // Basic URL validation
+    if (!body.photoUrl.startsWith("http://") && !body.photoUrl.startsWith("https://") && !body.photoUrl.startsWith("data:image/")) {
+      return "URL de foto no válida.";
+    }
+  }
+
+  if (body.discoveryPercentage !== undefined) {
+    const pct = Number(body.discoveryPercentage);
+    if (isNaN(pct) || pct < 0 || pct > 100) {
+      return "Porcentaje de descubrimiento debe estar entre 0 y 100.";
+    }
+  }
+
+  if (!body.userId || typeof body.userId !== "string") {
+    return "userId es requerido.";
+  }
+  // Basic UUID format check
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.userId)) {
+    return "userId debe ser un UUID válido.";
+  }
+
+  return null;
+}
+
+// ── Rate Limiting ────────────────────────────────────────────
+async function checkRateLimit(supabase: any, userId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.rpc("check_rate_limit", {
+      p_user_id: userId,
+      p_action: "analyze-emotion",
+      p_max_requests: 10,
+      p_window_seconds: 60,
+    });
+    if (error) {
+      console.error("Rate limit check error:", error);
+      return true; // Fail open
+    }
+    return data === true;
+  } catch (err) {
+    console.error("Rate limit exception:", err);
+    return true;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { description, photoUrl, discoveryPercentage, userId } = await req.json();
+    // ── Content-Type check ───────────────────────────────────
+    const contentType = req.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      return new Response(
+        JSON.stringify({ error: "Content-Type debe ser application/json" }),
+        { status: 415, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const body = await req.json();
+
+    // ── Input validation ─────────────────────────────────────
+    const validationError = validateRequest(body);
+    if (validationError) {
+      return new Response(
+        JSON.stringify({ error: validationError }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { description, photoUrl, discoveryPercentage, userId } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY no configurada");
@@ -20,6 +103,15 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // ── Rate limiting ────────────────────────────────────────
+    const allowed = await checkRateLimit(supabase, userId);
+    if (!allowed) {
+      return new Response(
+        JSON.stringify({ error: "Límite de solicitudes excedido. Máximo 10 análisis por minuto." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" } }
+      );
+    }
 
     // Construir mensaje para IA
     const messages: any[] = [
@@ -203,7 +295,6 @@ function generateMockPlaylist(
 
   let tracks = emotionTracks[emotion.toLowerCase()] || emotionTracks.tranquilo;
   
-  // Mezclar con preferencias del usuario si tiene
   if (userPreferences.length > 0 && discoveryPercentage < 100) {
     const userTracksCount = Math.floor((tracks.length * (100 - discoveryPercentage)) / 100);
     const randomUserTracks = userPreferences
