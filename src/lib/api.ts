@@ -27,7 +27,7 @@ interface ApiResult<T> {
 
 // ── Helpers ──────────────────────────────────────────────────
 async function wrap<T>(
-  fn: () => Promise<{ data: T | null; error: unknown }>,
+  fn: () => PromiseLike<{ data: T | null; error: unknown }>,
   fallbackCode?: string
 ): Promise<ApiResult<T>> {
   try {
