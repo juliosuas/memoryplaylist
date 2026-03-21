@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { Upload, Camera, Loader2, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface PhotoUploadProps {
   photoPreview: string;
