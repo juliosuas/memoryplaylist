@@ -34,13 +34,18 @@ interface PlaylistLoaderProps {
   onCancel?: () => void;
 }
 
-export const PlaylistLoader = ({ hasPhoto }: PlaylistLoaderProps) => {
+export const PlaylistLoader = ({ hasPhoto, onCancel }: PlaylistLoaderProps) => {
   const [progress, setProgress] = useState(0);
   const [phaseIndex, setPhaseIndex] = useState(0);
   const [displayedText, setDisplayedText] = useState("");
   const [typingIndex, setTypingIndex] = useState(0);
   const [songsFound, setSongsFound] = useState(0);
-  
+  const [showCancel, setShowCancel] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowCancel(true), 5000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Progress + song counter — slow & dramatic (~8s to reach 95%)
   useEffect(() => {
