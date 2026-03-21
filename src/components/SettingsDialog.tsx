@@ -58,7 +58,11 @@ const calculateStorageMetrics = (): StorageMetrics => {
   };
 };
 
-export const SettingsDialog = () => {
+interface SettingsDialogProps {
+  triggerClassName?: string;
+}
+
+export const SettingsDialog = ({ triggerClassName }: SettingsDialogProps = {}) => {
   const [open, setOpen] = useState(false);
   const [metrics, setMetrics] = useState<StorageMetrics>({
     experiences: 0,
