@@ -31,6 +31,7 @@ const TARGET_SONGS = 20;
 
 interface PlaylistLoaderProps {
   hasPhoto: boolean;
+  onCancel?: () => void;
 }
 
 export const PlaylistLoader = ({ hasPhoto }: PlaylistLoaderProps) => {
@@ -249,6 +250,22 @@ export const PlaylistLoader = ({ hasPhoto }: PlaylistLoaderProps) => {
             </span>
           ))}
         </div>
+
+        {/* Cancel button — appears after 5 seconds */}
+        {showCancel && onCancel && (
+          <button
+            onClick={onCancel}
+            className="mt-4 px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 animate-fade-up"
+            style={{
+              background: "rgba(255,255,255,0.2)",
+              backdropFilter: "blur(8px)",
+              border: "1px solid rgba(255,255,255,0.3)",
+              color: "rgba(255,255,255,0.9)",
+            }}
+          >
+            Cancelar
+          </button>
+        )}
       </div>
     </div>
   );

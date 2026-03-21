@@ -21,7 +21,7 @@ export const MoodSelector = ({ moods, selected, onSelect }: MoodSelectorProps) =
           type="button"
           onClick={() => onSelect(mood.id)}
           className={cn(
-            "group relative flex flex-col items-center justify-center gap-2 p-4 rounded-xl",
+            "group relative flex flex-col items-center justify-center gap-2 p-3 sm:p-4 rounded-xl",
             "border-2 transition-all duration-300 ease-out",
             "hover:scale-[1.02] active:scale-[0.98]",
             "animate-fade-up opacity-0",

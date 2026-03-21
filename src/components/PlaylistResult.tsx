@@ -174,21 +174,27 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
 
   // 🎉 Confetti celebration the moment results appear
   useEffect(() => {
+    if (!playlist) return;
+
     const colors = ["#ff6b6b", "#ff8c42", "#ff6bbc", "#ffd93d", "#ffffff", "#ff4f79"];
     const duration = 3000;
     const end = Date.now() + duration;
+    let cancelled = false;
 
     // Burst from center
     confetti({ particleCount: 100, spread: 120, origin: { x: 0.5, y: 0.6 }, colors, zIndex: 9999, scalar: 1.3, startVelocity: 40 });
 
     // Side streams
     const frame = () => {
+      if (cancelled) return;
       confetti({ particleCount: 5, angle: 60,  spread: 65, origin: { x: 0,   y: 0.65 }, colors, zIndex: 9999 });
       confetti({ particleCount: 5, angle: 120, spread: 65, origin: { x: 1,   y: 0.65 }, colors, zIndex: 9999 });
       if (Date.now() < end) requestAnimationFrame(frame);
     };
     frame();
-  }, []);
+
+    return () => { cancelled = true; };
+  }, [playlist]);
 
   const handleLike = (track: Track) => {
     const prefs = JSON.parse(localStorage.getItem("fryda_preferences") || "[]");
@@ -210,23 +216,14 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
   };
 
   const openSpotifyPlaylist = () => {
-    const query = tracks.slice(0, 1).map((t) => `${t.track_name} ${t.artist}`).join(" ");
-    window.open(`https://open.spotify.com/search/${encodeURIComponent(query)}`, "_blank");
-    // Open extra tracks with delay to avoid popup blocker
-    tracks.slice(1, 8).forEach((t, i) => {
-      setTimeout(() => {
-        window.open(`https://open.spotify.com/search/${encodeURIComponent(`${t.track_name} ${t.artist}`)}`, "_blank");
-      }, (i + 1) * 350);
-    });
+    const searchQuery = playlist?.emotion ? `${playlist.emotion} playlist` : "playlist";
+    window.open(`https://open.spotify.com/search/${encodeURIComponent(searchQuery)}`, "_blank");
     toast.success("¡Abriendo en Spotify!");
   };
 
   const openAppleMusicPlaylist = () => {
-    tracks.slice(0, 8).forEach((t, i) => {
-      setTimeout(() => {
-        window.open(`https://music.apple.com/search?term=${encodeURIComponent(`${t.track_name} ${t.artist}`)}`, "_blank");
-      }, i * 350);
-    });
+    const searchQuery = playlist?.emotion ? `${playlist.emotion} playlist` : "playlist";
+    window.open(`https://music.apple.com/search?term=${encodeURIComponent(searchQuery)}`, "_blank");
     toast.success("¡Abriendo en Apple Music!");
   };
 
@@ -247,6 +244,20 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
       <div className="text-center py-16">
         <p className="text-muted-foreground mb-4">Playlist no encontrada</p>
         <Button onClick={onBack}>Volver</Button>
+      </div>
+    );
+  }
+
+  if (tracks.length === 0) {
+    return (
+      <div className="text-center py-16 space-y-4 animate-fade-up">
+        <span className="text-5xl">🎵</span>
+        <p className="text-muted-foreground text-lg">
+          No encontramos canciones para esta combinación. ¡Intenta con otro mood o artista!
+        </p>
+        <Button onClick={onBack} className="gap-2">
+          Volver a intentar
+        </Button>
       </div>
     );
   }
@@ -352,7 +363,7 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
               </div>
               <p className="text-sm text-muted-foreground truncate">{track.artist}</p>
             </div>
-            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
               <Button size="icon" variant="ghost" onClick={() => handleLike(track)}><Heart className="w-4 h-4" /></Button>
               <Button size="icon" variant="ghost" onClick={() => openSpotifySearch(track)}><ExternalLink className="w-4 h-4" /></Button>
             </div>

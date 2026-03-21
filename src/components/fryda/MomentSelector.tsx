@@ -19,7 +19,7 @@ export const MomentSelector = ({ moments, selected, onSelect }: MomentSelectorPr
         <button
           key={moment.id}
           type="button"
-          onClick={() => onSelect(moment.id)}
+          onClick={() => onSelect(selected === moment.id ? "" : moment.id)}
           className={cn(
             "group relative flex items-center gap-3 p-3 rounded-xl",
             "border-2 transition-all duration-300 ease-out",

@@ -264,7 +264,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
 
   // Show loader when generating
   if (loading) {
-    return <PlaylistLoader hasPhoto={!!photoPreview} />;
+    return <PlaylistLoader hasPhoto={!!photoPreview} onCancel={() => setLoading(false)} />;
   }
 
   return (

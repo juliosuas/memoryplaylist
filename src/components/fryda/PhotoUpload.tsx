@@ -27,6 +27,8 @@ export const PhotoUpload = ({
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith("image/")) {
       onPhotoChange(file);
+    } else {
+      toast.error("Solo se permiten imágenes (JPG, PNG, etc.)");
     }
   };
 
