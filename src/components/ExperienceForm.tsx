@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { generateSmartPlaylist, getPhotoInsight, PhotoAnalysis, MusicProfile } from "@/lib/playlistGenerator";
 
 import { MoodSelector } from "./fryda/MoodSelector";
@@ -14,6 +13,19 @@ import { PlaylistLoader } from "./fryda/PlaylistLoader";
 
 interface ExperienceFormProps {
   onPlaylistGenerated: (playlistId: string) => void;
+}
+
+async function invokePhotoAnalysis(payload: {
+  photoBase64: string;
+  selectedMood: string;
+  selectedMomentType: string;
+  selectedTags: Array<{ type: "artist" | "song"; value: string; label: string }>;
+  newMusicPercentage: number;
+}) {
+  const { supabase } = await import("@/integrations/supabase/client");
+  return supabase.functions.invoke("analyze-photo", {
+    body: payload,
+  });
 }
 
 const MOODS = [
@@ -82,14 +94,12 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
 
       setAnalyzingPhoto(true);
       try {
-        const { data, error } = await supabase.functions.invoke("analyze-photo", {
-          body: {
-            photoBase64: compressed,
-            selectedMood,
-            selectedMomentType,
-            selectedTags,
-            newMusicPercentage: newMusicPercentage[0],
-          },
+        const { data, error } = await invokePhotoAnalysis({
+          photoBase64: compressed,
+          selectedMood,
+          selectedMomentType,
+          selectedTags,
+          newMusicPercentage: newMusicPercentage[0],
         });
 
         if (error) {
@@ -135,14 +145,12 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
       if (photoPreview && !photoAnalysis) {
         toast.info("Analizando tu foto...");
         try {
-          const { data, error } = await supabase.functions.invoke("analyze-photo", {
-            body: {
-              photoBase64: photoPreview,
-              selectedMood,
-              selectedMomentType,
-              selectedTags,
-              newMusicPercentage: newMusicPercentage[0],
-            },
+          const { data, error } = await invokePhotoAnalysis({
+            photoBase64: photoPreview,
+            selectedMood,
+            selectedMomentType,
+            selectedTags,
+            newMusicPercentage: newMusicPercentage[0],
           });
 
           if (!error && data?.photoAnalysis) {
