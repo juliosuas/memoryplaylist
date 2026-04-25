@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { generateSmartPlaylist, getPhotoInsight, PhotoAnalysis, MusicProfile } from "@/lib/playlistGenerator";
+import {
+  analyzePhotoWithRetry,
+  describePhotoAnalysisError,
+  isPhotoAnalysisConfigured,
+  type PhotoAnalysisErrorCode,
+} from "@/lib/photoAnalysis";
 
 import { MoodSelector } from "./fryda/MoodSelector";
 import { MomentSelector } from "./fryda/MomentSelector";
@@ -13,19 +19,6 @@ import { PlaylistLoader } from "./fryda/PlaylistLoader";
 
 interface ExperienceFormProps {
   onPlaylistGenerated: (playlistId: string) => void;
-}
-
-async function invokePhotoAnalysis(payload: {
-  photoBase64: string;
-  selectedMood: string;
-  selectedMomentType: string;
-  selectedTags: Array<{ type: "artist" | "song"; value: string; label: string }>;
-  newMusicPercentage: number;
-}) {
-  const { supabase } = await import("@/integrations/supabase/client");
-  return supabase.functions.invoke("analyze-photo", {
-    body: payload,
-  });
 }
 
 const MOODS = [
