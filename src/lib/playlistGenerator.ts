@@ -296,5 +296,24 @@ export function getPhotoInsight(photoAnalysis: PhotoAnalysis | null): string | n
     }
   }
 
-  return insights.length > 0 ? insights[0] : null;
+  if (insights.length > 0) return insights[0];
+
+  // Fallbacks so we ALWAYS show that the photo was analyzed.
+  const energy = photoAnalysis.energy || 5;
+  if (energy >= 8) return "⚡ Energía intensa detectada";
+  if (energy <= 3) return "🌙 Ambiente sereno detectado";
+
+  const lightingLabels: Record<string, string> = {
+    bright: "☀️ Luz brillante capturada",
+    dim: "🕯️ Luz tenue capturada",
+    golden: "🌇 Luz dorada mágica",
+    "blue-hour": "🌆 Hora azul detectada",
+    night: "🌃 Atmósfera nocturna",
+    natural: "🌤️ Luz natural balanceada",
+  };
+  if (photoAnalysis.lighting && lightingLabels[photoAnalysis.lighting]) {
+    return lightingLabels[photoAnalysis.lighting];
+  }
+
+  return "📸 Foto analizada con IA";
 }
