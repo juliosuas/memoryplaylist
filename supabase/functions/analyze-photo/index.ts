@@ -328,6 +328,7 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY no configurada");
 
     let photoAnalysis: PhotoAnalysis | null = null;
+    let aiWarning: string | null = null;
 
     if (photoBase64) {
       console.log("Analizando foto con IA...");
@@ -350,44 +351,84 @@ Devuelve SOLO un JSON válido sin markdown ni explicaciones con esta estructura 
 IMPORTANTE: dominantColors DEBE ser un array de strings. energy DEBE ser un número entero.
 Analiza colores, iluminación, expresiones, ambiente y contexto visual para determinar cada campo.`;
 
-      const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            {
-              role: "user",
-              content: [
-                { type: "text", text: analysisPrompt },
-                { type: "image_url", image_url: { url: photoBase64 } },
-              ],
-            },
-          ],
-        }),
-      });
-
-      if (!aiResponse.ok) {
-        const errorText = await aiResponse.text();
-        console.error("Error de IA:", aiResponse.status, errorText);
-      } else {
-        const aiData = await aiResponse.json();
-        const content = aiData.choices?.[0]?.message?.content?.trim() || "";
-        console.log("Respuesta IA raw:", content);
-
+      // Try with primary model + retries, then fallback model.
+      const callModel = async (model: string, attempt: number): Promise<PhotoAnalysis | null> => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20_000);
         try {
-          const jsonMatch = content.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            const rawAnalysis = JSON.parse(jsonMatch[0]);
-            photoAnalysis = normalizeAnalysis(rawAnalysis);
-            console.log("Análisis normalizado:", JSON.stringify(photoAnalysis));
+          const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            signal: controller.signal,
+            body: JSON.stringify({
+              model,
+              messages: [
+                {
+                  role: "user",
+                  content: [
+                    { type: "text", text: analysisPrompt },
+                    { type: "image_url", image_url: { url: photoBase64 } },
+                  ],
+                },
+              ],
+            }),
+          });
+
+          if (!aiResponse.ok) {
+            const errorText = (await aiResponse.text()).slice(0, 200);
+            console.error(`[${model} attempt ${attempt}] AI ${aiResponse.status}: ${errorText}`);
+            // Surface 429/402 to the client so it can show a clear message.
+            if (aiResponse.status === 429) aiWarning = "ai_rate_limited";
+            else if (aiResponse.status === 402) aiWarning = "ai_payment_required";
+            else aiWarning = "ai_unavailable";
+            return null;
           }
-        } catch (parseError) {
-          console.error("Error parseando JSON:", parseError);
+
+          const aiData = await aiResponse.json();
+          const content = aiData.choices?.[0]?.message?.content?.trim() || "";
+          console.log(`[${model} attempt ${attempt}] raw:`, content.slice(0, 200));
+
+          const jsonMatch = content.match(/\{[\s\S]*\}/);
+          if (!jsonMatch) {
+            console.error(`[${model} attempt ${attempt}] no JSON in response`);
+            return null;
+          }
+          const rawAnalysis = JSON.parse(jsonMatch[0]);
+          return normalizeAnalysis(rawAnalysis);
+        } catch (err: any) {
+          const reason = err?.name === "AbortError" ? "timeout" : err?.message || "unknown";
+          console.error(`[${model} attempt ${attempt}] fetch failed: ${reason}`);
+          return null;
+        } finally {
+          clearTimeout(timeoutId);
         }
+      };
+
+      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      const backoffs = [300, 800, 1500];
+      const primaryModel = "google/gemini-2.5-flash";
+      const fallbackModel = "google/gemini-2.5-flash-lite";
+
+      for (let i = 0; i < backoffs.length && !photoAnalysis; i++) {
+        if (i > 0) await sleep(backoffs[i - 1]);
+        photoAnalysis = await callModel(primaryModel, i + 1);
+      }
+
+      if (!photoAnalysis) {
+        console.warn("Primary model failed 3x, trying fallback model");
+        await sleep(500);
+        photoAnalysis = await callModel(fallbackModel, 1);
+      }
+
+      if (photoAnalysis) {
+        aiWarning = null;
+        console.log("Análisis normalizado:", JSON.stringify(photoAnalysis));
+      } else {
+        console.error("All AI attempts exhausted, returning null analysis");
+        if (!aiWarning) aiWarning = "ai_unavailable";
       }
     }
 
@@ -395,7 +436,7 @@ Analiza colores, iluminación, expresiones, ambiente y contexto visual para dete
     console.log("Perfil musical generado:", JSON.stringify(musicProfile));
 
     return new Response(
-      JSON.stringify({ success: true, photoAnalysis, musicProfile }),
+      JSON.stringify({ success: true, photoAnalysis, musicProfile, warning: aiWarning }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
