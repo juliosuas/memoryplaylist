@@ -1,80 +1,86 @@
+# Plan: blindar el backend de IA para que SIEMPRE funcione al subir foto
 
-Objetivo: sacar la app del estado roto primero, incluso si eso implica volver a una versión estable y reintroducir cambios de forma segura.
+## Diagnóstico verificado
 
-## Diagnóstico probable
+Probé el backend `analyze-photo` directamente con curl y va perfecto:
+- Petición sin foto → **200 OK**, devuelve perfil musical.
+- Petición con foto real (1200×800 JPEG) → **200 OK en 1.5 s**, devuelve análisis válido (`mood`, `scene`, `energy`, etc.).
+- Logs de la edge function: solo aparecen mis llamadas de prueba; **el cliente del usuario apenas está logrando invocar la función**, lo que confirma que el fallo está en el camino navegador → edge function, no en la edge function en sí.
 
-Encontré dos riesgos fuertes en el código actual:
+### Causas reales del fallo en producción
 
-1. `src/components/ui/sonner.tsx` usa `useTheme()` de `next-themes`, pero `src/App.tsx` no tiene ningún `ThemeProvider`.
-   - Eso puede romper el montaje completo de React y dejar la pantalla en blanco.
+1. **El cliente Supabase puede estar mal configurado en runtime.** Si `VITE_SUPABASE_URL` o `VITE_SUPABASE_PUBLISHABLE_KEY` no están en el bundle publicado, `supabase.functions.invoke()` falla antes de hacer fetch. El `try/catch` actual lo silencia con un toast genérico.
+2. **No hay reintentos.** Un error de red transitorio (común en móvil) mata el análisis sin segunda oportunidad.
+3. **No hay timeout claro.** Si la red se cuelga, el botón "Analizando…" se queda eterno.
+4. **No se distinguen tipos de error** (red, validación, rate limit, IA caída): todo dice lo mismo.
+5. **El insight a veces está vacío** (cuando `dominantColors=["neutral"]` y el resto sale por defecto) y parece que "no analizó nada" aunque sí lo hizo.
+6. **El payload se envía con campos `selected*` vacíos** durante la subida (porque el usuario aún no ha elegido mood/momento). Esto no rompe la edge function, pero ensucia el `musicProfile` previo.
 
-2. El router solo tiene ruta `/`, pero tu preview actual está en `/index`.
-   - Eso puede dejar la app en una ruta no contemplada o en un estado inconsistente según cómo se abra el preview.
+## Cambios al backend (edge function `analyze-photo`)
 
-También revisaré los cambios recientes en loader/resultados para asegurar que no haya otro crash silencioso al render inicial.
+### 1. Reintentos internos al llamar al modelo de IA
+Si la llamada a `ai.gateway.lovable.dev` falla o devuelve no-OK, reintentar hasta **3 veces** con backoff (300 ms, 800 ms, 1500 ms) antes de rendirse. Hoy un único 5xx puntual deja `photoAnalysis: null`.
 
-## Plan de arreglo
+### 2. Fallback de modelo
+Si `google/gemini-2.5-flash` falla las 3 veces, intentar una vez más con `google/gemini-2.5-flash-lite` antes de devolver `null`. Así garantizamos respuesta visual incluso con saturación del modelo principal.
 
-### 1. Cortar la causa más probable del blanco
-Actualizar `src/components/ui/sonner.tsx` para que no dependa de `next-themes` sin provider.
-- Opción preferida: hacerlo compatible con el sistema actual de tema que ya usa `ThemeToggle` con `document.documentElement`.
-- Alternativa: envolver la app con `ThemeProvider` correctamente si conviene más.
+### 3. Timeout explícito en la llamada al modelo
+Añadir `AbortController` con 20 s para la llamada al gateway de IA. Mejor un fallo claro que un cuelgue.
 
-Resultado esperado: la app vuelve a montar.
+### 4. Respuesta de error estructurada
+Cuando el análisis falle de verdad, devolver `200` con `{ success: true, photoAnalysis: null, musicProfile, warning: "ai_unavailable" }` en vez de `500`. El cliente nunca debe quedarse sin respuesta usable: el `musicProfile` por mood+momento ya basta para generar la playlist.
 
-### 2. Corregir la navegación base
-Actualizar `src/App.tsx` para soportar tanto:
-- `/`
-- `/index`
+### 5. Logs más útiles
+Imprimir el `status` y los primeros 200 caracteres de la respuesta del gateway cuando falle, para poder diagnosticar futuros incidentes desde la consola de la edge function.
 
-Así evitamos que el preview o enlaces internos caigan fuera de la ruta principal.
+## Cambios al cliente (`src/components/ExperienceForm.tsx`, `src/lib/api.ts`)
 
-### 3. Revisar el render inicial de pantalla principal
-Validar `src/pages/Index.tsx`, `src/components/SettingsDialog.tsx`, `src/components/fryda/PlaylistLoader.tsx` y `src/components/PlaylistResult.tsx` para eliminar cualquier render problemático que pueda seguir bloqueando la UI.
-En especial:
-- props opcionales mal usados
-- referencias a APIs del navegador en momentos inseguros
-- animaciones/overlays que cubran toda la pantalla sin contenido visible
+### A. Helper de invocación con reintentos + timeout
+Crear `analyzePhotoWithRetry(payload)` en `src/lib/api.ts` que:
+- Llama a `supabase.functions.invoke("analyze-photo", { body })`.
+- Reintenta hasta **3 veces** con backoff exponencial (500 ms, 1500 ms, 3000 ms) ante errores de red, 429 y 5xx.
+- Aborta cada intento a los **25 s** con `AbortController`.
+- Devuelve `{ data, error, attempts }` para diagnóstico.
 
-### 4. Hacer una restauración mínima si sigue roto
-Si después de corregir el crash principal la app sigue sin renderizar, haré rollback a la última versión estable desde el historial y luego reaplicaré solo los cambios seguros:
-- botón del logo para volver al inicio
-- loader atractivo
-- mejoras visuales que no rompan el montaje
+### B. Manejo de errores diferenciado
+Mostrar al usuario un mensaje específico:
+- Sin internet → "Sin conexión. Volveremos a intentarlo cuando haya señal."
+- 429 → "Demasiados análisis seguidos. Espera 30 segundos y reintenta."
+- 5xx tras todos los reintentos → "Nuestro analizador está saturado. Reintenta en unos segundos."
+- Cualquier otro → "No pudimos analizar tu foto. Toca para reintentar."
 
-Importante: si hay que volver atrás, la forma correcta es restaurar una versión estable del historial, no “deshacer” archivos manualmente uno por uno.
+### C. Botón "Reintentar análisis" en `PhotoUpload`
+Cuando hay foto pero el análisis terminó sin `photoAnalysis`, mostrar un botón visible "Reintentar análisis con IA" que llama de nuevo a `analyzePhotoWithRetry` sin volver a subir el archivo.
 
-## Validación después del fix
+### D. Validación temprana del cliente Supabase
+Al iniciar `ExperienceForm`, verificar que el cliente Supabase está disponible. Si `VITE_SUPABASE_URL` falta, mostrar un banner discreto ("Conecta el backend para activar el análisis con IA") en vez de fallar silenciosamente al subir la foto.
 
-Voy a verificar estos puntos:
-1. La landing carga correctamente
-2. El formulario se ve en web y móvil
-3. El logo regresa al inicio
-4. El loader aparece al generar playlist
-5. La pantalla de resultados renderiza sin blanco
-6. La ruta `/` y `/index` funcionan
+### E. Insight nunca vacío
+Mejorar `getPhotoInsight` para que **siempre** devuelva un texto humano, aunque el análisis traiga valores neutros (ej. "Detectamos un ambiente sereno"). Así el usuario ve confirmación visual de que el análisis ocurrió.
 
-## Detalle técnico
+### F. Eliminar el reanálisis silencioso en `handleSubmit`
+Como el análisis se hace al subir y se puede reintentar manualmente, quitar el bloque "si hay foto pero no análisis, intentar de nuevo en submit". El submit asume que el análisis ya está hecho.
 
-Archivos más probables a tocar:
-- `src/components/ui/sonner.tsx`
-- `src/App.tsx`
-- `src/pages/Index.tsx`
-- `src/components/SettingsDialog.tsx`
-- `src/components/fryda/PlaylistLoader.tsx`
-- `src/components/PlaylistResult.tsx`
+## Validación post-cambios
 
-Causa principal más probable:
-```text
-useTheme() sin ThemeProvider
-=> error de contexto / fallo de montaje
-=> página en blanco
-```
+1. **Backend con curl**: 5 llamadas seguidas con foto real → 5 × 200 OK con `photoAnalysis` poblado.
+2. **Cliente en preview**: subir 3 fotos distintas → loader aparece, insight aparece bajo la foto.
+3. **Simular fallo de red**: bloquear la edge function en DevTools → ver 3 reintentos en consola y mensaje claro al usuario; botón "Reintentar" funcional.
+4. **Logs de edge function**: confirmar que cada intento queda registrado con status real.
 
-Plan de contingencia:
-```text
-1. Fix puntual del crash
-2. Probar render base
-3. Si aún falla: restaurar última versión estable
-4. Reaplicar mejoras en pasos pequeños
-```
+## Detalles técnicos
+
+- Sin migraciones de BD.
+- Sin nuevos secrets (todos los necesarios — `LOVABLE_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — ya existen).
+- Sin nuevas dependencias.
+- Archivos editados:
+  - `supabase/functions/analyze-photo/index.ts` (reintentos + fallback de modelo + timeout + warning)
+  - `src/lib/api.ts` (helper `analyzePhotoWithRetry`)
+  - `src/components/ExperienceForm.tsx` (usa helper, sin reanálisis silencioso, mensajes específicos)
+  - `src/components/fryda/PhotoUpload.tsx` (botón "Reintentar análisis" + estado de fallo)
+  - `src/lib/playlistGenerator.ts` (`getPhotoInsight` siempre devuelve texto)
+
+## Lo que NO se toca en este plan
+- Foto obligatoria/opcional → lo decidiremos después, primero garantizar que el análisis funcione.
+- Solapamiento del botón de modo oscuro → se aborda en un plan separado tras aprobar éste.
+- Copy del hero → sin cambios.
