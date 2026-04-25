@@ -254,6 +254,8 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
       setPhotoPreview("");
       setPhotoAnalysis(null);
       setPhotoInsight(null);
+      setPhotoMusicProfile(null);
+      setPhotoError(null);
       setNewMusicPercentage([50]);
     } catch (error: any) {
       console.error("Error:", error);
@@ -275,6 +277,8 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
           photoPreview={photoPreview}
           photoInsight={photoInsight}
           isAnalyzing={analyzingPhoto}
+          errorMessage={photoError ? describePhotoAnalysisError(photoError) : null}
+          onRetryAnalysis={photoError ? handleRetryAnalysis : undefined}
           onPhotoChange={handlePhotoChange}
           onPhotoRemove={handlePhotoRemove}
         />
