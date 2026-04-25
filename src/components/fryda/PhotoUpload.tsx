@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Upload, Camera, Loader2, Sparkles, X } from "lucide-react";
+import { Upload, Camera, Loader2, Sparkles, X, AlertCircle, RotateCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -8,6 +8,8 @@ interface PhotoUploadProps {
   photoPreview: string;
   photoInsight: string | null;
   isAnalyzing: boolean;
+  errorMessage?: string | null;
+  onRetryAnalysis?: () => void;
   onPhotoChange: (file: File) => void;
   onPhotoRemove: () => void;
 }
@@ -16,6 +18,8 @@ export const PhotoUpload = ({
   photoPreview,
   photoInsight,
   isAnalyzing,
+  errorMessage,
+  onRetryAnalysis,
   onPhotoChange,
   onPhotoRemove,
 }: PhotoUploadProps) => {
@@ -51,7 +55,8 @@ export const PhotoUpload = ({
 
   if (photoPreview) {
     return (
-      <div className="relative rounded-2xl overflow-hidden animate-scale-in">
+      <div className="space-y-3 animate-scale-in">
+        <div className="relative rounded-2xl overflow-hidden">
         <div className="aspect-[16/9] relative">
           <img
             src={photoPreview}
@@ -94,6 +99,28 @@ export const PhotoUpload = ({
             <X className="w-4 h-4" />
           </Button>
         </div>
+        </div>
+
+        {errorMessage && !isAnalyzing && (
+          <div className="flex items-start gap-3 rounded-xl border border-destructive/40 bg-destructive/10 p-3 animate-fade-up">
+            <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+            <div className="flex-1 space-y-2">
+              <p className="text-sm text-foreground">{errorMessage}</p>
+              {onRetryAnalysis && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onRetryAnalysis}
+                  className="gap-2"
+                >
+                  <RotateCw className="w-3.5 h-3.5" />
+                  Reintentar análisis con IA
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
