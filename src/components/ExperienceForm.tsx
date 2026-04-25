@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { generateSmartPlaylist, getPhotoInsight, PhotoAnalysis, MusicProfile } from "@/lib/playlistGenerator";
+import {
+  analyzePhotoWithRetry,
+  describePhotoAnalysisError,
+  isPhotoAnalysisConfigured,
+  type PhotoAnalysisErrorCode,
+} from "@/lib/photoAnalysis";
 
 import { MoodSelector } from "./fryda/MoodSelector";
 import { MomentSelector } from "./fryda/MomentSelector";
@@ -13,19 +19,6 @@ import { PlaylistLoader } from "./fryda/PlaylistLoader";
 
 interface ExperienceFormProps {
   onPlaylistGenerated: (playlistId: string) => void;
-}
-
-async function invokePhotoAnalysis(payload: {
-  photoBase64: string;
-  selectedMood: string;
-  selectedMomentType: string;
-  selectedTags: Array<{ type: "artist" | "song"; value: string; label: string }>;
-  newMusicPercentage: number;
-}) {
-  const { supabase } = await import("@/integrations/supabase/client");
-  return supabase.functions.invoke("analyze-photo", {
-    body: payload,
-  });
 }
 
 const MOODS = [
@@ -81,52 +74,71 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
   const [analyzingPhoto, setAnalyzingPhoto] = useState(false);
   const [photoAnalysis, setPhotoAnalysis] = useState<PhotoAnalysis | null>(null);
   const [photoInsight, setPhotoInsight] = useState<string | null>(null);
+  const [photoMusicProfile, setPhotoMusicProfile] = useState<MusicProfile | null>(null);
+  const [photoError, setPhotoError] = useState<PhotoAnalysisErrorCode | null>(null);
+  const [backendReady] = useState<boolean>(isPhotoAnalysisConfigured());
+
+  const runPhotoAnalysis = async (compressedBase64: string) => {
+    setAnalyzingPhoto(true);
+    setPhotoError(null);
+
+    const result = await analyzePhotoWithRetry({
+      photoBase64: compressedBase64,
+      selectedMood,
+      selectedMomentType,
+      selectedTags,
+      newMusicPercentage: newMusicPercentage[0],
+    });
+
+    if (result.data?.photoAnalysis) {
+      const analysis = result.data.photoAnalysis as unknown as PhotoAnalysis;
+      setPhotoAnalysis(analysis);
+      setPhotoMusicProfile((result.data.musicProfile as unknown as MusicProfile) ?? null);
+      const insight = getPhotoInsight(analysis);
+      setPhotoInsight(insight);
+      if (insight) toast.success(insight);
+    } else {
+      const code = result.error ?? "unknown";
+      console.error(`Photo analysis failed after ${result.attempts} attempts:`, code);
+      setPhotoError(code);
+      toast.error(describePhotoAnalysisError(code));
+    }
+
+    setAnalyzingPhoto(false);
+  };
 
   const handlePhotoChange = async (file: File) => {
     setPhotoAnalysis(null);
     setPhotoInsight(null);
+    setPhotoMusicProfile(null);
+    setPhotoError(null);
+
+    if (!backendReady) {
+      toast.error("El backend de IA no está disponible en este momento.");
+      return;
+    }
 
     const reader = new FileReader();
     reader.onloadend = async () => {
       const raw = reader.result as string;
       const compressed = await resizeImage(raw);
       setPhotoPreview(compressed);
-
-      setAnalyzingPhoto(true);
-      try {
-        const { data, error } = await invokePhotoAnalysis({
-          photoBase64: compressed,
-          selectedMood,
-          selectedMomentType,
-          selectedTags,
-          newMusicPercentage: newMusicPercentage[0],
-        });
-
-        if (error) {
-          console.error("Error analizando foto:", error);
-          toast.error("No se pudo analizar la foto. Puedes continuar sin ella.");
-        } else if (data?.photoAnalysis) {
-          setPhotoAnalysis(data.photoAnalysis);
-          const insight = getPhotoInsight(data.photoAnalysis);
-          setPhotoInsight(insight);
-          if (insight) {
-            toast.success(insight);
-          }
-        }
-      } catch (err) {
-        console.error("Error en análisis:", err);
-        toast.error("Error al analizar la foto. Puedes continuar sin ella.");
-      } finally {
-        setAnalyzingPhoto(false);
-      }
+      await runPhotoAnalysis(compressed);
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleRetryAnalysis = async () => {
+    if (!photoPreview || analyzingPhoto) return;
+    await runPhotoAnalysis(photoPreview);
   };
 
   const handlePhotoRemove = () => {
     setPhotoPreview("");
     setPhotoAnalysis(null);
     setPhotoInsight(null);
+    setPhotoMusicProfile(null);
+    setPhotoError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -138,29 +150,10 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
 
     setLoading(true);
     try {
-      let currentPhotoAnalysis = photoAnalysis;
-      let musicProfile: MusicProfile | null = null;
-
-      // If photo exists but wasn't analyzed yet, analyze now
-      if (photoPreview && !photoAnalysis) {
-        toast.info("Analizando tu foto...");
-        try {
-          const { data, error } = await invokePhotoAnalysis({
-            photoBase64: photoPreview,
-            selectedMood,
-            selectedMomentType,
-            selectedTags,
-            newMusicPercentage: newMusicPercentage[0],
-          });
-
-          if (!error && data?.photoAnalysis) {
-            currentPhotoAnalysis = data.photoAnalysis;
-            musicProfile = data.musicProfile;
-          }
-        } catch (err) {
-          console.error("Error analizando foto:", err);
-        }
-      }
+      // Photo analysis is performed at upload time (with retries) and the
+      // result is cached in state. handleSubmit just consumes it.
+      const currentPhotoAnalysis = photoAnalysis;
+      const musicProfile: MusicProfile | null = photoMusicProfile;
 
       const playlistTracks = generateSmartPlaylist(
         selectedMood,
@@ -261,6 +254,8 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
       setPhotoPreview("");
       setPhotoAnalysis(null);
       setPhotoInsight(null);
+      setPhotoMusicProfile(null);
+      setPhotoError(null);
       setNewMusicPercentage([50]);
     } catch (error: any) {
       console.error("Error:", error);
@@ -282,6 +277,8 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
           photoPreview={photoPreview}
           photoInsight={photoInsight}
           isAnalyzing={analyzingPhoto}
+          errorMessage={photoError ? describePhotoAnalysisError(photoError) : null}
+          onRetryAnalysis={photoError ? handleRetryAnalysis : undefined}
           onPhotoChange={handlePhotoChange}
           onPhotoRemove={handlePhotoRemove}
         />
