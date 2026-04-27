@@ -38,14 +38,6 @@ function validateRequest(body: any): string | null {
     }
   }
 
-  if (!body.userId || typeof body.userId !== "string") {
-    return "userId es requerido.";
-  }
-  // Basic UUID format check
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.userId)) {
-    return "userId debe ser un UUID válido.";
-  }
-
   return null;
 }
 
@@ -84,6 +76,29 @@ serve(async (req) => {
       );
     }
 
+    // ── Authentication: require a valid user JWT ─────────────
+    const authHeader = req.headers.get("Authorization") || "";
+    if (!authHeader.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Autenticación requerida." }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      return new Response(
+        JSON.stringify({ error: "Sesión inválida." }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const userId = claimsData.claims.sub as string;
+
     const body = await req.json();
 
     // ── Input validation ─────────────────────────────────────
@@ -95,14 +110,13 @@ serve(async (req) => {
       );
     }
 
-    const { description, photoUrl, discoveryPercentage, userId } = body;
+    const { description, photoUrl, discoveryPercentage } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY no configurada");
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Use the JWT-scoped client so RLS protects writes/reads.
+    const supabase = authClient;
 
     // ── Rate limiting ────────────────────────────────────────
     const allowed = await checkRateLimit(supabase, userId);

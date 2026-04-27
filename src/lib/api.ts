@@ -408,11 +408,17 @@ export async function uploadExperiencePhoto(
       return { data: null, error: "DB_INSERT_FAILED" };
     }
 
-    const { data: urlData } = supabase.storage
+    // Bucket is private; return a short-lived signed URL (1 hour).
+    const { data: signed, error: signedError } = await supabase.storage
       .from("experience-photos")
-      .getPublicUrl(path);
+      .createSignedUrl(path, 3600);
 
-    return { data: urlData.publicUrl, error: null };
+    if (signedError || !signed?.signedUrl) {
+      handleError(signedError, "DB_FETCH_FAILED");
+      return { data: null, error: "DB_FETCH_FAILED" };
+    }
+
+    return { data: signed.signedUrl, error: null };
   } catch (err) {
     handleError(err, "DB_INSERT_FAILED");
     return { data: null, error: "DB_INSERT_FAILED" };
