@@ -354,7 +354,8 @@ Analiza colores, iluminación, expresiones, ambiente y contexto visual para dete
       // Try with primary model + retries, then fallback model.
       const callModel = async (model: string, attempt: number): Promise<PhotoAnalysis | null> => {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20_000);
+        const timeoutMs = model.includes("pro") ? 30_000 : 20_000;
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
         try {
           const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
