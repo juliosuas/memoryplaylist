@@ -408,9 +408,9 @@ Analiza colores, iluminación, expresiones, ambiente y contexto visual para dete
       };
 
       const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-      const backoffs = [300, 800, 1500];
-      const primaryModel = "google/gemini-2.5-flash";
-      const fallbackModel = "google/gemini-2.5-flash-lite";
+      const backoffs = [500, 1500];
+      const primaryModel = "google/gemini-2.5-pro";
+      const fallbackModel = "google/gemini-2.5-flash";
 
       for (let i = 0; i < backoffs.length && !photoAnalysis; i++) {
         if (i > 0) await sleep(backoffs[i - 1]);
