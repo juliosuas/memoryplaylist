@@ -1,86 +1,86 @@
-# Plan: blindar el backend de IA para que SIEMPRE funcione al subir foto
+# Arreglo de generación, mejor algoritmo de canciones y nuevo LLM de imagen
 
-## Diagnóstico verificado
+## Resumen
+1. **Bug**: el botón "Generar Playlist" a veces no avanza a la pantalla de resultado.
+2. **Algoritmo**: la selección de canciones se siente poco afinada con el mood/foto.
+3. **LLM de imagen**: cambiar de `google/gemini-2.5-flash` a un modelo más preciso para que el análisis aporte realmente al algoritmo.
 
-Probé el backend `analyze-photo` directamente con curl y va perfecto:
-- Petición sin foto → **200 OK**, devuelve perfil musical.
-- Petición con foto real (1200×800 JPEG) → **200 OK en 1.5 s**, devuelve análisis válido (`mood`, `scene`, `energy`, etc.).
-- Logs de la edge function: solo aparecen mis llamadas de prueba; **el cliente del usuario apenas está logrando invocar la función**, lo que confirma que el fallo está en el camino navegador → edge function, no en la edge function en sí.
+---
 
-### Causas reales del fallo en producción
+## 1. Por qué no se genera la playlist al dar click
 
-1. **El cliente Supabase puede estar mal configurado en runtime.** Si `VITE_SUPABASE_URL` o `VITE_SUPABASE_PUBLISHABLE_KEY` no están en el bundle publicado, `supabase.functions.invoke()` falla antes de hacer fetch. El `try/catch` actual lo silencia con un toast genérico.
-2. **No hay reintentos.** Un error de red transitorio (común en móvil) mata el análisis sin segunda oportunidad.
-3. **No hay timeout claro.** Si la red se cuelga, el botón "Analizando…" se queda eterno.
-4. **No se distinguen tipos de error** (red, validación, rate limit, IA caída): todo dice lo mismo.
-5. **El insight a veces está vacío** (cuando `dominantColors=["neutral"]` y el resto sale por defecto) y parece que "no analizó nada" aunque sí lo hizo.
-6. **El payload se envía con campos `selected*` vacíos** durante la subida (porque el usuario aún no ha elegido mood/momento). Esto no rompe la edge function, pero ensucia el `musicProfile` previo.
+Revisé `ExperienceForm.handleSubmit` y `Index.tsx`. El flujo está correcto pero hay tres puntos frágiles que explican el bloqueo que ves:
 
-## Cambios al backend (edge function `analyze-photo`)
+- **El botón se queda como "Creando tu playlist…" si algo falla antes del `setLoading(false)`** porque hoy hay un único `try/catch` muy ancho. Si `generateSmartPlaylist` devuelve `[]` (puede pasar cuando el mood no matchea nada y el catálogo no completa), igual sigue, pero si `localStorage` revienta por cuota dentro del bloque `try`, se traga el error sin notificar y el `await new Promise(r => setTimeout(r, 8000))` igual corre, dando sensación de "no pasa nada".
+- **El `setTimeout` de 8s para "suspense"** ocurre **después** de guardar todo. Si el usuario dio click y tu navegador estaba en otra pestaña o el dispositivo se durmió, el timer se pausa y parece que nunca llega al resultado.
+- **El `PlaylistLoader` solo se renderiza cuando `loading=true`**, pero si la generación falla muy rápido por un error de tipos en el catálogo (ej. `t.youtubeId` undefined en una pista), el `catch` muestra el toast de error pero el loader desaparece sin navegar.
 
-### 1. Reintentos internos al llamar al modelo de IA
-Si la llamada a `ai.gateway.lovable.dev` falla o devuelve no-OK, reintentar hasta **3 veces** con backoff (300 ms, 800 ms, 1500 ms) antes de rendirse. Hoy un único 5xx puntual deja `photoAnalysis: null`.
+### Fix
+- Validar que `playlistTracks.length >= 10` antes de avanzar; si no, generar un fallback garantizado (top 25 por mood + random) y nunca quedar en cero.
+- Mover la pausa dramática **antes** de los `setItem` y reducirla a 4s (hoy son 8s y el `PlaylistLoader` ya tiene su propio ciclo visual).
+- Envolver cada `localStorage.setItem` en su propio try/catch ya con limpieza, y aunque falle el storage **siempre** llamar a `onPlaylistGenerated(playlistId)`. La playlist debe abrirse aunque no se haya podido persistir todo.
+- Añadir `console.log` y un toast de diagnóstico cuando `playlistTracks.length === 0` para no quedarnos a ciegas.
+- Asegurar que `setLoading(false)` se llama también justo antes de `onPlaylistGenerated` para que al volver al formulario no quede el spinner.
 
-### 2. Fallback de modelo
-Si `google/gemini-2.5-flash` falla las 3 veces, intentar una vez más con `google/gemini-2.5-flash-lite` antes de devolver `null`. Así garantizamos respuesta visual incluso con saturación del modelo principal.
+## 2. Mejorar el algoritmo de selección de canciones
 
-### 3. Timeout explícito en la llamada al modelo
-Añadir `AbortController` con 20 s para la llamada al gateway de IA. Mejor un fallo claro que un cuelgue.
+Lo que hay hoy en `playlistGenerator.ts` puntúa bien pero tiene tres debilidades:
+1. **El score por mood pesa 5 y por tag pesa 45–60**, así que cuando el usuario no selecciona artistas la playlist queda dominada por azar (todas las pistas con mood matcheado terminan en empate).
+2. **No respeta el `energyRange` del `MusicProfile`** que ya construye la edge function (lo ignoramos en el cliente, lo único que usamos es `secondaryMoods` y `genreHints`).
+3. **No diversifica por artista**: pueden salir 4 canciones del mismo artista seguidas.
 
-### 4. Respuesta de error estructurada
-Cuando el análisis falle de verdad, devolver `200` con `{ success: true, photoAnalysis: null, musicProfile, warning: "ai_unavailable" }` en vez de `500`. El cliente nunca debe quedarse sin respuesta usable: el `musicProfile` por mood+momento ya basta para generar la playlist.
+### Cambios propuestos en `src/lib/playlistGenerator.ts`
+- **Reescalado de scores** para que mood + momento + foto compitan mejor cuando no hay tags:
+  - Mood primario: +10 (antes 5)
+  - Mood secundario del perfil: +3 cada match (antes 1)
+  - Momento: +6 (antes 3)
+  - Coincidencia escena↔momento: +4 (antes 2)
+  - Coincidencia foto-mood: +5 (antes 2)
+  - Energía dentro del `energyRange` del perfil: +4 si está en rango, +2 si está a 1 de distancia.
+  - Géneros del perfil: +1.5 por match (antes 0.5).
+- **Penalización suave por repetir artista**: tras ordenar, recorrer y bajar -3 por cada pista del mismo artista ya elegida en los primeros 10 slots.
+- **Diversidad**: limitar a máximo 2 pistas del mismo artista en la playlist final (excepto si el usuario lo pinneó como tag).
+- **Respeto al `DiscoverySlider`**: hoy si `newMusicPercentage` es 0 y no hay tags, `selectedKnown` queda vacío y todo viene de `selectedNew`. Cambiar para que el "known pool" cuando no hay tags se llene con pistas de mood+momento del usuario (sus "favoritos predichos") y "new" sea el resto del catálogo.
+- **Bonus por moodAtmosphere**: añadir score +2 si `track.tags` contiene alguna `atmosphereKeywords` del perfil.
+- **Determinismo parcial**: usar un seed basado en `Date.now()` para la mezcla, así re-generar da playlist distinta cada vez (ya lo hace, lo confirmamos).
 
-### 5. Logs más útiles
-Imprimir el `status` y los primeros 200 caracteres de la respuesta del gateway cuando falle, para poder diagnosticar futuros incidentes desde la consola de la edge function.
+### Cambios en la edge function
+- Devolver el `musicProfile` con `energyRange` ya tunado por la foto para que el cliente lo use de verdad.
 
-## Cambios al cliente (`src/components/ExperienceForm.tsx`, `src/lib/api.ts`)
+## 3. Cambio de LLM para análisis de foto
 
-### A. Helper de invocación con reintentos + timeout
-Crear `analyzePhotoWithRetry(payload)` en `src/lib/api.ts` que:
-- Llama a `supabase.functions.invoke("analyze-photo", { body })`.
-- Reintenta hasta **3 veces** con backoff exponencial (500 ms, 1500 ms, 3000 ms) ante errores de red, 429 y 5xx.
-- Aborta cada intento a los **25 s** con `AbortController`.
-- Devuelve `{ data, error, attempts }` para diagnóstico.
+Hoy: `google/gemini-2.5-flash` con fallback a `gemini-2.5-flash-lite`.
 
-### B. Manejo de errores diferenciado
-Mostrar al usuario un mensaje específico:
-- Sin internet → "Sin conexión. Volveremos a intentarlo cuando haya señal."
-- 429 → "Demasiados análisis seguidos. Espera 30 segundos y reintenta."
-- 5xx tras todos los reintentos → "Nuestro analizador está saturado. Reintenta en unos segundos."
-- Cualquier otro → "No pudimos analizar tu foto. Toca para reintentar."
+Recomendación: subir a **`google/gemini-2.5-pro`** como modelo principal y dejar `gemini-2.5-flash` como fallback rápido.
 
-### C. Botón "Reintentar análisis" en `PhotoUpload`
-Cuando hay foto pero el análisis terminó sin `photoAnalysis`, mostrar un botón visible "Reintentar análisis con IA" que llama de nuevo a `analyzePhotoWithRetry` sin volver a subir el archivo.
+Por qué:
+- `gemini-2.5-pro` es mejor en imágenes complejas (escenas con varias personas, iluminaciones mixtas, ambigüedad emocional), que es exactamente nuestro caso.
+- El coste por análisis es mayor pero el análisis de foto es **una sola llamada por playlist**, no un chat continuo, así que el impacto es bajo.
+- El fallback a `flash` mantiene velocidad si Pro está saturado o tarda más de 20s.
 
-### D. Validación temprana del cliente Supabase
-Al iniciar `ExperienceForm`, verificar que el cliente Supabase está disponible. Si `VITE_SUPABASE_URL` falta, mostrar un banner discreto ("Conecta el backend para activar el análisis con IA") en vez de fallar silenciosamente al subir la foto.
+Cambios en `supabase/functions/analyze-photo/index.ts`:
+- `primaryModel = "google/gemini-2.5-pro"`
+- `fallbackModel = "google/gemini-2.5-flash"`
+- Subir el timeout del intento Pro de 20s a 30s (Pro suele tardar más).
+- Reducir reintentos del primario de 3 a 2 (Pro falla menos pero es más caro reintentar).
+- Mantener todo lo demás igual (rate limit, normalización, warning codes).
 
-### E. Insight nunca vacío
-Mejorar `getPhotoInsight` para que **siempre** devuelva un texto humano, aunque el análisis traiga valores neutros (ej. "Detectamos un ambiente sereno"). Así el usuario ve confirmación visual de que el análisis ocurrió.
+### Alternativas si prefieres
+- **`google/gemini-3-flash-preview`** (default actual de Lovable AI) — más nuevo, balance velocidad/precisión, gratis dentro del cupo. Buena opción si quieres equilibrio.
+- **`openai/gpt-5-mini`** — excelente comprensión visual, multimodal sólido, coste medio.
 
-### F. Eliminar el reanálisis silencioso en `handleSubmit`
-Como el análisis se hace al subir y se puede reintentar manualmente, quitar el bloque "si hay foto pero no análisis, intentar de nuevo en submit". El submit asume que el análisis ya está hecho.
+Si no me dices preferencia, voy con **`gemini-2.5-pro` + fallback `gemini-2.5-flash`** porque maximiza calidad del análisis (que es la queja del algoritmo).
 
-## Validación post-cambios
+---
 
-1. **Backend con curl**: 5 llamadas seguidas con foto real → 5 × 200 OK con `photoAnalysis` poblado.
-2. **Cliente en preview**: subir 3 fotos distintas → loader aparece, insight aparece bajo la foto.
-3. **Simular fallo de red**: bloquear la edge function en DevTools → ver 3 reintentos en consola y mensaje claro al usuario; botón "Reintentar" funcional.
-4. **Logs de edge function**: confirmar que cada intento queda registrado con status real.
+## Archivos editados
 
-## Detalles técnicos
+- `src/components/ExperienceForm.tsx` — fix de bloqueo en submit, fallback de pista vacía, reducción de pausa dramática, mejor manejo de cuota de storage.
+- `src/lib/playlistGenerator.ts` — nuevo scoring, diversidad por artista, uso de `energyRange` y `atmosphereKeywords`.
+- `supabase/functions/analyze-photo/index.ts` — cambio de modelo a `gemini-2.5-pro`, timeout 30s, devolución completa del `musicProfile`.
 
-- Sin migraciones de BD.
-- Sin nuevos secrets (todos los necesarios — `LOVABLE_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — ya existen).
-- Sin nuevas dependencias.
-- Archivos editados:
-  - `supabase/functions/analyze-photo/index.ts` (reintentos + fallback de modelo + timeout + warning)
-  - `src/lib/api.ts` (helper `analyzePhotoWithRetry`)
-  - `src/components/ExperienceForm.tsx` (usa helper, sin reanálisis silencioso, mensajes específicos)
-  - `src/components/fryda/PhotoUpload.tsx` (botón "Reintentar análisis" + estado de fallo)
-  - `src/lib/playlistGenerator.ts` (`getPhotoInsight` siempre devuelve texto)
-
-## Lo que NO se toca en este plan
-- Foto obligatoria/opcional → lo decidiremos después, primero garantizar que el análisis funcione.
-- Solapamiento del botón de modo oscuro → se aborda en un plan separado tras aprobar éste.
-- Copy del hero → sin cambios.
+## Lo que NO cambia
+- UI del formulario, copy ni branding.
+- Catálogo de pistas (`src/data/tracks.ts`).
+- Storage local (sigue siendo localStorage, sin BD).
+- Foto sigue siendo opcional pero recomendada (no la hacemos obligatoria todavía — eso fue plan separado).
