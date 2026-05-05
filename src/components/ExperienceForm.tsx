@@ -164,6 +164,13 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         musicProfile
       );
 
+      if (!playlistTracks || playlistTracks.length === 0) {
+        console.error("Playlist generator returned empty tracks");
+        toast.error("No pudimos armar la playlist. Intenta con otro mood.");
+        setLoading(false);
+        return;
+      }
+
       const tracksToSave = playlistTracks.map((t) => ({
         track_name: t.track_name,
         artist: t.artist,
@@ -231,20 +238,25 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         created_at: new Date().toISOString(),
       }));
 
-      const allTracks = JSON.parse(localStorage.getItem("fryda_tracks") || "[]");
-      allTracks.push(...tracks);
       try {
-        localStorage.setItem("fryda_tracks", JSON.stringify(allTracks));
-      } catch {
-        const trimmed = allTracks.slice(-2000);
-        try { localStorage.setItem("fryda_tracks", JSON.stringify(trimmed)); } catch {}
+        const allTracks = JSON.parse(localStorage.getItem("fryda_tracks") || "[]");
+        allTracks.push(...tracks);
+        try {
+          localStorage.setItem("fryda_tracks", JSON.stringify(allTracks));
+        } catch {
+          const trimmed = allTracks.slice(-2000);
+          try { localStorage.setItem("fryda_tracks", JSON.stringify(trimmed)); } catch {}
+        }
+      } catch (storageErr) {
+        console.warn("Track storage failed, continuing anyway:", storageErr);
       }
 
-      // Long dramatic wait so the loader builds suspense before revealing the playlist
-      await new Promise((r) => setTimeout(r, 8000));
+      // Dramatic wait — shortened so the user reaches the playlist faster.
+      await new Promise((r) => setTimeout(r, 4000));
 
       const insight = currentPhotoAnalysis ? getPhotoInsight(currentPhotoAnalysis) : null;
       toast.success(insight ? `¡Playlist creada! ${insight}` : "¡Playlist generada con éxito!");
+      setLoading(false);
       onPlaylistGenerated(playlistId);
 
       // Reset

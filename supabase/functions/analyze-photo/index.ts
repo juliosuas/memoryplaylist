@@ -354,7 +354,8 @@ Analiza colores, iluminación, expresiones, ambiente y contexto visual para dete
       // Try with primary model + retries, then fallback model.
       const callModel = async (model: string, attempt: number): Promise<PhotoAnalysis | null> => {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20_000);
+        const timeoutMs = model.includes("pro") ? 30_000 : 20_000;
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
         try {
           const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
@@ -408,9 +409,9 @@ Analiza colores, iluminación, expresiones, ambiente y contexto visual para dete
       };
 
       const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-      const backoffs = [300, 800, 1500];
-      const primaryModel = "google/gemini-2.5-flash";
-      const fallbackModel = "google/gemini-2.5-flash-lite";
+      const backoffs = [500, 1500];
+      const primaryModel = "google/gemini-2.5-pro";
+      const fallbackModel = "google/gemini-2.5-flash";
 
       for (let i = 0; i < backoffs.length && !photoAnalysis; i++) {
         if (i > 0) await sleep(backoffs[i - 1]);
