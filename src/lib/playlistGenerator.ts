@@ -100,21 +100,31 @@ export function generateSmartPlaylist(
 
     // === PUNTUACIÓN POR MOOD ===
     if (effectiveMoods.some((m) => track.moods.includes(m))) {
-      score += 5;
+      score += 10;
     }
 
     // +1 punto por cada mood secundario del perfil
     if (musicProfile?.secondaryMoods) {
       track.moods.forEach((trackMood) => {
         if (musicProfile.secondaryMoods.includes(trackMood)) {
-          score += 1;
+          score += 3;
         }
       });
     }
 
     // === PUNTUACIÓN POR TIPO DE MOMENTO ===
     if (selectedMomentType && track.moment_types?.includes(selectedMomentType)) {
-      score += 3;
+      score += 6;
+    }
+
+    // === PUNTUACIÓN POR ENERGY RANGE DEL PERFIL ===
+    if (musicProfile?.energyRange && track.energy) {
+      const [lo, hi] = musicProfile.energyRange;
+      if (track.energy >= lo && track.energy <= hi) {
+        score += 4;
+      } else if (track.energy >= lo - 1 && track.energy <= hi + 1) {
+        score += 2;
+      }
     }
 
     // === PUNTUACIÓN POR ANÁLISIS VISUAL (si hay foto) ===
@@ -144,7 +154,7 @@ export function generateSmartPlaylist(
       if (validScene) {
         const relatedMoments = sceneToMoment[validScene] || [];
         if (track.moment_types?.some((mt) => relatedMoments.includes(mt))) {
-          score += 2;
+          score += 4;
         }
       }
 
@@ -161,7 +171,7 @@ export function generateSmartPlaylist(
       if (validMood) {
         const relatedMoods = photoMoodToTrackMoods[validMood] || [];
         if (track.moods.some((m) => relatedMoods.includes(m))) {
-          score += 2;
+          score += 5;
         }
       }
 
@@ -209,7 +219,7 @@ export function generateSmartPlaylist(
     // === PUNTUACIÓN POR GÉNERO (si hay hints) ===
     if (musicProfile?.genreHints && track.genres) {
       const matchingGenres = track.genres.filter((g) => musicProfile.genreHints.includes(g));
-      score += matchingGenres.length * 0.5;
+      score += matchingGenres.length * 1.5;
     }
 
     return { track, score, isKnown };
@@ -221,8 +231,14 @@ export function generateSmartPlaylist(
     .sort((a, b) => b.score - a.score);
 
   // Pools (sin duplicar los pineados)
-  const knownTracks = relevantTracks.filter((t) => t.isKnown && !pinnedIds.has(t.track.id));
-  const newTracks = relevantTracks.filter((t) => !t.isKnown && !pinnedIds.has(t.track.id));
+  // Si el usuario seleccionó tags, "known" = tags. Si no, "known" = top picks por mood/momento.
+  const hasTags = selectedTags.length > 0;
+  const knownTracks = hasTags
+    ? relevantTracks.filter((t) => t.isKnown && !pinnedIds.has(t.track.id))
+    : relevantTracks.filter((t) => t.score >= 10 && !pinnedIds.has(t.track.id));
+  const newTracks = hasTags
+    ? relevantTracks.filter((t) => !t.isKnown && !pinnedIds.has(t.track.id))
+    : relevantTracks.filter((t) => t.score < 10 && !pinnedIds.has(t.track.id));
 
   // Calcular distribución según slider (sobre el espacio restante)
   const remainingSlots = targetSize - pinnedSelection.length;
@@ -254,8 +270,31 @@ export function generateSmartPlaylist(
     playlist = [...playlist, ...shuffleArray(fillFrom).slice(0, targetSize - playlist.length)];
   }
 
-  // Mantener relevancia: los pineados van primero y el resto tiene variedad por shuffle parcial.
-  return playlist.slice(0, targetSize);
+  // === DIVERSIDAD POR ARTISTA ===
+  // Máximo 2 pistas del mismo artista (excepto pineadas por tag explícito).
+  const artistCount = new Map<string, number>();
+  pinnedSelection.forEach((t) => {
+    const k = t.artist.toLowerCase();
+    artistCount.set(k, (artistCount.get(k) ?? 0) + 1);
+  });
+  const diversified: TrackData[] = [...pinnedSelection];
+  const overflow: TrackData[] = [];
+  for (const t of playlist.slice(pinnedSelection.length)) {
+    const k = t.artist.toLowerCase();
+    const count = artistCount.get(k) ?? 0;
+    if (count < 2) {
+      diversified.push(t);
+      artistCount.set(k, count + 1);
+    } else {
+      overflow.push(t);
+    }
+    if (diversified.length >= targetSize) break;
+  }
+  if (diversified.length < targetSize) {
+    diversified.push(...overflow.slice(0, targetSize - diversified.length));
+  }
+
+  return diversified.slice(0, targetSize);
 }
 
 // Función para determinar el mood secundario más relevante basado en la foto
