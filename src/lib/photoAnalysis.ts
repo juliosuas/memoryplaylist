@@ -46,8 +46,11 @@ const ENDPOINT = SUPABASE_URL
   ? `${SUPABASE_URL.replace(/\/$/, "")}/functions/v1/analyze-photo`
   : "";
 
-const REQUEST_TIMEOUT_MS = 25_000;
-const BACKOFFS = [500, 1500, 3000];
+// Keep the product responsive even when the Supabase project is paused or
+// the Edge Function/Gateway is unavailable. One short remote attempt is enough;
+// the deterministic local analyzer below is the guaranteed happy path.
+const REQUEST_TIMEOUT_MS = 8_000;
+const BACKOFFS = [0];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -329,9 +332,9 @@ async function singleAttempt(
 }
 
 /**
- * Calls analyze-photo with up to 3 retries on transient errors
- * (offline, timeout, server_error). Returns the first success or
- * the last error encountered.
+ * Calls analyze-photo once with a short timeout, then falls back locally.
+ * Fryda must never make the user wait on a paused Supabase project or missing
+ * Lovable AI Gateway key just to generate a playlist.
  */
 export async function analyzePhotoWithRetry(
   payload: PhotoAnalysisPayload
