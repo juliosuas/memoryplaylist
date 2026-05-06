@@ -325,12 +325,11 @@ serve(async (req) => {
     const { photoBase64, selectedMood, selectedMomentType, selectedTags, newMusicPercentage } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY no configurada");
 
     let photoAnalysis: PhotoAnalysis | null = null;
     let aiWarning: string | null = null;
 
-    if (photoBase64) {
+    if (photoBase64 && LOVABLE_API_KEY) {
       console.log("Analizando foto con IA...");
 
       const analysisPrompt = `Analiza esta imagen y extrae patrones visuales para crear una playlist musical personalizada.
@@ -431,6 +430,8 @@ Analiza colores, iluminación, expresiones, ambiente y contexto visual para dete
         console.error("All AI attempts exhausted, returning null analysis");
         if (!aiWarning) aiWarning = "ai_unavailable";
       }
+    } else if (photoBase64 && !LOVABLE_API_KEY) {
+      console.warn("LOVABLE_API_KEY no configurada; usando perfil musical sin análisis visual IA.");
     }
 
     const musicProfile = buildMusicProfile(photoAnalysis, selectedMood, selectedMomentType, newMusicPercentage);

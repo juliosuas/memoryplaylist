@@ -3,7 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 // ── Input Validation ─────────────────────────────────────────
@@ -39,6 +40,28 @@ function validateRequest(body: any): string | null {
   }
 
   return null;
+}
+
+function fallbackEmotion(description: string): string {
+  const text = description.toLowerCase();
+
+  const rules: Array<{ emotion: string; words: string[] }> = [
+    { emotion: "romántico", words: ["amor", "enamorado", "beso", "cita", "pareja", "romántico", "romantico"] },
+    { emotion: "nostálgico", words: ["extraño", "recuerdo", "antes", "pasado", "nostalgia", "nostálgico", "nostalgico"] },
+    { emotion: "melancólico", words: ["triste", "llor", "dolor", "adiós", "adios", "perdí", "perdi"] },
+    { emotion: "motivado", words: ["logré", "logre", "gym", "entren", "trabajo", "meta", "gané", "gane", "éxito", "exito"] },
+    { emotion: "energético", words: ["fiesta", "bail", "concierto", "euforia", "energ", "noche"] },
+    { emotion: "feliz", words: ["feliz", "alegr", "risa", "sonrisa", "vacaciones", "amigos"] },
+    { emotion: "tranquilo", words: ["calma", "paz", "relax", "tranquilo", "café", "cafe", "playa"] },
+  ];
+
+  let best = { emotion: "tranquilo", score: 0 };
+  for (const rule of rules) {
+    const score = rule.words.reduce((acc, word) => acc + (text.includes(word) ? 1 : 0), 0);
+    if (score > best.score) best = { emotion: rule.emotion, score };
+  }
+
+  return best.emotion;
 }
 
 // ── Rate Limiting ────────────────────────────────────────────
@@ -113,7 +136,6 @@ serve(async (req) => {
     const { description, photoUrl, discoveryPercentage } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY no configurada");
 
     // Use the JWT-scoped client so RLS protects writes/reads.
     const supabase = authClient;
@@ -151,27 +173,36 @@ serve(async (req) => {
       });
     }
 
-    // Analizar emoción con Lovable AI
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages,
-      }),
-    });
+    let emotion = fallbackEmotion(description);
 
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error("Error de IA:", aiResponse.status, errorText);
-      throw new Error("Error al analizar emoción");
+    if (LOVABLE_API_KEY) {
+      try {
+        // Analizar emoción con Lovable AI
+        const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages,
+          }),
+        });
+
+        if (!aiResponse.ok) {
+          const errorText = await aiResponse.text();
+          console.error("Error de IA:", aiResponse.status, errorText);
+        } else {
+          const aiData = await aiResponse.json();
+          emotion = aiData.choices?.[0]?.message?.content?.trim() || emotion;
+        }
+      } catch (aiError) {
+        console.error("Excepción de IA, usando fallback:", aiError);
+      }
+    } else {
+      console.warn("LOVABLE_API_KEY no configurada; usando detector local de emoción.");
     }
-
-    const aiData = await aiResponse.json();
-    const emotion = aiData.choices?.[0]?.message?.content?.trim() || "tranquilo";
 
     // Crear experiencia
     const { data: experienceData, error: expError } = await supabase
