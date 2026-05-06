@@ -9,16 +9,14 @@ import {
   type PhotoAnalysisErrorCode,
 } from "@/lib/photoAnalysis";
 
-import { MoodSelector } from "./fryda/MoodSelector";
-import { MomentSelector } from "./fryda/MomentSelector";
 import { PhotoUpload } from "./fryda/PhotoUpload";
 import { ArtistSearch } from "./fryda/ArtistSearch";
-import { DiscoverySlider } from "./fryda/DiscoverySlider";
 import { FormSection } from "./fryda/FormSection";
 import { GenerateButton } from "./fryda/GenerateButton";
 import { PlaylistLoader } from "./fryda/PlaylistLoader";
 
 const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
+const DEFAULT_DISCOVERY_PERCENTAGE = 15;
 
 function isHeicLike(file: File): boolean {
   const name = file.name.toLowerCase();
@@ -88,16 +86,55 @@ const MOODS = [
   { id: "libre", label: "Libre", emoji: "😎" },
 ];
 
-const MOMENTS = [
-  { id: "vacaciones", label: "Vacaciones", emoji: "🏖️" },
-  { id: "fiesta", label: "Fiesta", emoji: "💃" },
-  { id: "tranquilo", label: "Día tranquilo", emoji: "🏡" },
-  { id: "despedida", label: "Despedida", emoji: "💔" },
-  { id: "concierto", label: "Concierto", emoji: "🎶" },
-  { id: "noche", label: "Noche especial", emoji: "🌃" },
-  { id: "inspiracion", label: "Inspiración", emoji: "💡" },
-  { id: "evento", label: "Evento", emoji: "📸" },
-];
+function deriveMoodFromPhoto(photoAnalysis: PhotoAnalysis | null): string {
+  if (!photoAnalysis) return "relajado";
+
+  const moodMap: Record<string, string> = {
+    happy: "feliz",
+    melancholic: "nostálgico",
+    energetic: "motivado",
+    peaceful: "relajado",
+    romantic: "enamorado",
+    nostalgic: "nostálgico",
+    adventurous: "libre",
+  };
+
+  if (photoAnalysis.mood && moodMap[photoAnalysis.mood]) {
+    return moodMap[photoAnalysis.mood];
+  }
+
+  if ((photoAnalysis.energy ?? 5) >= 8) return "motivado";
+  if ((photoAnalysis.energy ?? 5) <= 3) return "reflexivo";
+  if (photoAnalysis.timeOfDay === "night") return "nostálgico";
+
+  return "relajado";
+}
+
+function deriveMomentFromPhoto(photoAnalysis: PhotoAnalysis | null): string {
+  if (!photoAnalysis) return "tranquilo";
+
+  const sceneMap: Record<string, string> = {
+    beach: "vacaciones",
+    city: photoAnalysis.timeOfDay === "night" ? "noche" : "evento",
+    nature: "tranquilo",
+    party: "fiesta",
+    concert: "concierto",
+    sunset: "noche",
+    mountain: "vacaciones",
+    road: "vacaciones",
+    cafe: "inspiracion",
+    indoor: photoAnalysis.timeOfDay === "night" ? "noche" : "tranquilo",
+  };
+
+  if (photoAnalysis.scene && sceneMap[photoAnalysis.scene]) {
+    return sceneMap[photoAnalysis.scene];
+  }
+
+  if (photoAnalysis.activity === "celebrating") return "fiesta";
+  if (photoAnalysis.timeOfDay === "night") return "noche";
+
+  return "tranquilo";
+}
 
 // Compress image to max 1200px and JPEG 0.7 quality
 function resizeImage(base64: string, maxWidth = 1200, quality = 0.7): Promise<string> {
@@ -118,11 +155,8 @@ function resizeImage(base64: string, maxWidth = 1200, quality = 0.7): Promise<st
 }
 
 export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => {
-  const [selectedMood, setSelectedMood] = useState("");
-  const [selectedMomentType, setSelectedMomentType] = useState("");
   const [selectedTags, setSelectedTags] = useState<Array<{ type: "artist" | "song"; value: string; label: string }>>([]);
   const [photoPreview, setPhotoPreview] = useState("");
-  const [newMusicPercentage, setNewMusicPercentage] = useState([50]);
   const [loading, setLoading] = useState(false);
   const [analyzingPhoto, setAnalyzingPhoto] = useState(false);
   const [photoAnalysis, setPhotoAnalysis] = useState<PhotoAnalysis | null>(null);
@@ -134,10 +168,8 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
 
   const getAnalysisSignature = (photo = photoPreview) => JSON.stringify({
     photo: photo ? photo.slice(0, 80) : "",
-    mood: selectedMood,
-    moment: selectedMomentType,
     tags: selectedTags.map((t) => `${t.type}:${t.value}`).sort(),
-    discovery: newMusicPercentage[0],
+    discovery: DEFAULT_DISCOVERY_PERCENTAGE,
   });
 
   const runPhotoAnalysis = async (compressedBase64: string, signature = getAnalysisSignature()) => {
@@ -147,10 +179,10 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
     try {
       const result = await analyzePhotoWithRetry({
         photoBase64: compressedBase64,
-        selectedMood,
-        selectedMomentType,
+        selectedMood: "",
+        selectedMomentType: "",
         selectedTags,
-        newMusicPercentage: newMusicPercentage[0],
+        newMusicPercentage: DEFAULT_DISCOVERY_PERCENTAGE,
       });
 
       if (result.data?.photoAnalysis) {
@@ -212,8 +244,8 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedMood) {
-      toast.error("Selecciona cómo te sentiste en ese momento");
+    if (!photoPreview) {
+      toast.error("Sube una foto para que Fryda detecte el mood y arme la playlist.");
       return;
     }
 
@@ -236,11 +268,14 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         }
       }
 
+      const detectedMood = deriveMoodFromPhoto(currentPhotoAnalysis);
+      const detectedMoment = deriveMomentFromPhoto(currentPhotoAnalysis);
+
       const playlistTracks = generateSmartPlaylist(
-        selectedMood,
-        selectedMomentType,
+        detectedMood,
+        detectedMoment,
         selectedTags,
-        newMusicPercentage[0],
+        DEFAULT_DISCOVERY_PERCENTAGE,
         currentPhotoAnalysis,
         musicProfile
       );
@@ -268,27 +303,27 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
       const experienceId = Date.now().toString();
       const experience = {
         id: experienceId,
-        mood: selectedMood,
-        moment_type: selectedMomentType,
+        mood: detectedMood,
+        moment_type: detectedMoment,
         tags: selectedTags,
         photo_analysis: currentPhotoAnalysis,
-        new_music_percentage: newMusicPercentage[0],
+        new_music_percentage: DEFAULT_DISCOVERY_PERCENTAGE,
         created_at: new Date().toISOString(),
       };
 
       const playlistId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const moodLabel = MOODS.find((m) => m.id === selectedMood)?.emoji || "";
+      const moodLabel = MOODS.find((m) => m.id === detectedMood)?.emoji || "📸";
       const playlistName = currentPhotoAnalysis
-        ? `${moodLabel} ${selectedMood} • ${getPhotoInsight(currentPhotoAnalysis)?.split(" ").slice(0, 2).join(" ") || "📸"}`
-        : `${moodLabel} Playlist ${selectedMood}`;
+        ? `${moodLabel} ${detectedMood} • ${getPhotoInsight(currentPhotoAnalysis)?.split(" ").slice(0, 2).join(" ") || "foto"}`
+        : `${moodLabel} Playlist de tu foto`;
 
       const playlist = {
         id: playlistId,
         experience_id: experienceId,
         name: playlistName,
-        emotion: selectedMood,
-        moment_type: selectedMomentType,
-        new_music_percentage: newMusicPercentage[0],
+        emotion: detectedMood,
+        moment_type: detectedMoment,
+        new_music_percentage: DEFAULT_DISCOVERY_PERCENTAGE,
         tags: selectedTags,
         photo_analysis: currentPhotoAnalysis,
         created_at: new Date().toISOString(),
@@ -315,8 +350,6 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
       onPlaylistGenerated(playlistId);
 
       // Reset
-      setSelectedMood("");
-      setSelectedMomentType("");
       setSelectedTags([]);
       setPhotoPreview("");
       setPhotoAnalysis(null);
@@ -324,7 +357,6 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
       setPhotoMusicProfile(null);
       setPhotoError(null);
       setPhotoAnalysisSignature("");
-      setNewMusicPercentage([50]);
     } catch (error: unknown) {
       console.error("Error:", error);
       toast.error(error instanceof Error ? error.message : "Error al generar playlist");
@@ -340,7 +372,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      <FormSection step={1} title="Sube una foto" subtitle="La IA analizará los colores, escenas y emociones">
+      <FormSection title="Sube una foto" subtitle="Fryda detecta el mood, el momento y la energía automáticamente.">
         <PhotoUpload
           photoPreview={photoPreview}
           photoInsight={photoInsight}
@@ -352,15 +384,13 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         />
       </FormSection>
 
-      <FormSection step={2} title="¿Cómo te sentías?" subtitle="Elige la emoción que mejor describe ese momento">
-        <MoodSelector moods={MOODS} selected={selectedMood} onSelect={setSelectedMood} />
-      </FormSection>
+      {photoInsight && !analyzingPhoto && (
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground animate-fade-up">
+          <span className="font-semibold">Lectura de la foto:</span> {photoInsight}. Ajustaré la playlist desde esa vibra.
+        </div>
+      )}
 
-      <FormSection step={3} title="¿Qué tipo de momento era?" subtitle="Opcional - ayuda a afinar las recomendaciones">
-        <MomentSelector moments={MOMENTS} selected={selectedMomentType} onSelect={setSelectedMomentType} />
-      </FormSection>
-
-      <FormSection step={4} title="Canciones o artistas que recuerdes" subtitle="Opcional - usaremos tu gusto musical para personalizar">
+      <FormSection title="Opcional: afina con tu gusto" subtitle="Si agregas artistas o canciones, Fryda se pega más a tu sonido. Si no, la foto manda.">
         <ArtistSearch
           selectedTags={selectedTags}
           onAddTag={(tag) => setSelectedTags([...selectedTags, tag])}
@@ -368,12 +398,8 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         />
       </FormSection>
 
-      <FormSection step={5} title="Balance musical" subtitle="¿Más favoritos conocidos o descubrir música nueva?">
-        <DiscoverySlider value={newMusicPercentage} onChange={setNewMusicPercentage} />
-      </FormSection>
-
       <div className="pt-4">
-        <GenerateButton isLoading={loading} disabled={!selectedMood} />
+        <GenerateButton isLoading={loading} disabled={!photoPreview || analyzingPhoto} />
       </div>
     </form>
   );

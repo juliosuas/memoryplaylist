@@ -28,7 +28,7 @@ export const GenerateButton = ({ isLoading, disabled }: GenerateButtonProps) => 
       ) : (
         <>
           <Sparkles className="w-5 h-5 mr-2" />
-          Generar Playlist
+          Crear playlist desde la foto
         </>
       )}
     </Button>
