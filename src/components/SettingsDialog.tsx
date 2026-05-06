@@ -91,7 +91,7 @@ export const SettingsDialog = ({ triggerClassName }: SettingsDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className={triggerClassName || "fixed top-4 right-4 z-50"}>
+          <Button variant="ghost" size="icon" className={triggerClassName ?? "fixed top-4 right-4 z-50"}>
           <Settings className="h-5 w-5" />
           <span className="sr-only">Ajustes</span>
         </Button>
