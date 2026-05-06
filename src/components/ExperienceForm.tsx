@@ -18,6 +18,58 @@ import { FormSection } from "./fryda/FormSection";
 import { GenerateButton } from "./fryda/GenerateButton";
 import { PlaylistLoader } from "./fryda/PlaylistLoader";
 
+const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
+
+function isHeicLike(file: File): boolean {
+  const name = file.name.toLowerCase();
+  return (
+    file.type === "image/heic" ||
+    file.type === "image/heif" ||
+    name.endsWith(".heic") ||
+    name.endsWith(".heif")
+  );
+}
+
+function readFileAsDataUrl(file: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === "string") resolve(reader.result);
+      else reject(new Error("No pudimos leer la imagen."));
+    };
+    reader.onerror = () => reject(new Error("No pudimos leer la imagen."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function normalizePhotoForBrowser(file: File): Promise<string> {
+  if (file.size > MAX_UPLOAD_BYTES) {
+    throw new Error("La imagen es demasiado grande. Prueba con una foto menor a 12 MB.");
+  }
+
+  if (!file.type.startsWith("image/") && !isHeicLike(file)) {
+    throw new Error("Solo se permiten imágenes (JPG, PNG, WebP o HEIC de iPhone).");
+  }
+
+  if (!isHeicLike(file)) {
+    return readFileAsDataUrl(file);
+  }
+
+  try {
+    const { default: heic2any } = await import("heic2any");
+    const converted = await heic2any({
+      blob: file,
+      toType: "image/jpeg",
+      quality: 0.82,
+    });
+    const jpegBlob = Array.isArray(converted) ? converted[0] : converted;
+    return readFileAsDataUrl(jpegBlob);
+  } catch (error) {
+    console.error("HEIC conversion failed:", error);
+    throw new Error("Tu iPhone mandó una foto HEIC y no pudimos convertirla. Exporta/manda la foto como JPG e inténtalo otra vez.");
+  }
+}
+
 interface ExperienceFormProps {
   onPlaylistGenerated: (playlistId: string) => void;
 }
@@ -129,17 +181,19 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
     setPhotoMusicProfile(null);
     setPhotoError(null);
 
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const raw = reader.result as string;
+    try {
+      const raw = await normalizePhotoForBrowser(file);
       const compressed = await resizeImage(raw);
       setPhotoPreview(compressed);
       if (!backendReady) {
         toast.message("Analizando localmente mientras se publica el backend de IA.");
       }
       await runPhotoAnalysis(compressed, getAnalysisSignature(compressed));
-    };
-    reader.readAsDataURL(file);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No pudimos cargar la imagen.";
+      toast.error(message);
+      setPhotoError("bad_request");
+    }
   };
 
   const handleRetryAnalysis = async () => {

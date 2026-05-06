@@ -26,14 +26,27 @@ export const PhotoUpload = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const isAcceptedPhoto = (file: File) => {
+    const name = file.name.toLowerCase();
+    return (
+      file.type.startsWith("image/") ||
+      name.endsWith(".heic") ||
+      name.endsWith(".heif") ||
+      name.endsWith(".jpg") ||
+      name.endsWith(".jpeg") ||
+      name.endsWith(".png") ||
+      name.endsWith(".webp")
+    );
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
     const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith("image/")) {
+    if (file && isAcceptedPhoto(file)) {
       onPhotoChange(file);
     } else {
-      toast.error("Solo se permiten imágenes (JPG, PNG, etc.)");
+      toast.error("Solo se permiten imágenes (JPG, PNG, WebP o HEIC de iPhone)");
     }
   };
 
@@ -51,6 +64,8 @@ export const PhotoUpload = ({
     if (file) {
       onPhotoChange(file);
     }
+    // Allow selecting the same iPhone photo again after an error/retry.
+    e.currentTarget.value = "";
   };
 
   if (photoPreview) {
@@ -169,7 +184,7 @@ export const PhotoUpload = ({
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif"
         onChange={handleInputChange}
         className="hidden"
       />
