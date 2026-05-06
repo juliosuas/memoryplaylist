@@ -2,16 +2,25 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+const hasSupabaseConfig = Boolean(SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY);
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
-
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-    storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: true,
+// Fryda must stay usable even when Lovable/Supabase env vars are not published yet.
+// The app stores playlists locally and calls edge functions through a fail-open wrapper,
+// so this placeholder prevents a blank-screen crash from createClient(undefined, undefined).
+export const supabase = createClient<Database>(
+  hasSupabaseConfig ? SUPABASE_URL! : "https://example.supabase.co",
+  hasSupabaseConfig ? SUPABASE_PUBLISHABLE_KEY! : "anon-placeholder",
+  {
+    auth: {
+      storage: localStorage,
+      persistSession: true,
+      autoRefreshToken: true,
+    }
   }
-});
+);
+
+export const isSupabaseConfigured = hasSupabaseConfig;
