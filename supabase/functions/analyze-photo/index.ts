@@ -58,6 +58,7 @@ function validateRequest(body: any): string | null {
 
 // ── Rate Limiting ────────────────────────────────────────────
 async function checkRateLimit(supabase: any, userId: string): Promise<boolean> {
+  if (!supabase || !userId) return true;
   try {
     const { data, error } = await supabase.rpc("check_rate_limit", {
       p_user_id: userId,
@@ -86,6 +87,13 @@ function extractUserId(authHeader: string | null): string | null {
   } catch {
     return null;
   }
+}
+
+function jsonResponse(payload: Record<string, unknown>, status = 200, extraHeaders: Record<string, string> = {}) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { ...corsHeaders, ...extraHeaders, "Content-Type": "application/json" },
+  });
 }
 
 interface PhotoAnalysis {
@@ -152,6 +160,8 @@ function normalizeAnalysis(raw: any): PhotoAnalysis {
 }
 
 function fallbackPhotoAnalysis(selectedMood: string, selectedMomentType: string): PhotoAnalysis {
+  selectedMood = selectedMood || "relajado";
+  selectedMomentType = selectedMomentType || "tranquilo";
   const moodFromSelected: Record<string, string> = {
     enamorado: "romantic",
     "nostálgico": "nostalgic",
@@ -330,10 +340,7 @@ serve(async (req) => {
     // ── Content-Type check ───────────────────────────────────
     const contentType = req.headers.get("content-type") || "";
     if (!contentType.includes("application/json")) {
-      return new Response(
-        JSON.stringify({ error: "Content-Type debe ser application/json" }),
-        { status: 415, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ error: "Content-Type debe ser application/json" }, 415);
     }
 
     const body = await req.json();
@@ -341,29 +348,36 @@ serve(async (req) => {
     // ── Input validation ─────────────────────────────────────
     const validationError = validateRequest(body);
     if (validationError) {
-      return new Response(
-        JSON.stringify({ error: validationError }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ error: validationError }, 400);
     }
 
     // ── Rate limiting ────────────────────────────────────────
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabase = supabaseUrl && supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null;
+    if (!supabase) {
+      console.warn("Supabase service env missing; skipping rate limit and using functional fallback path.");
+    }
 
     const userId = extractUserId(req.headers.get("authorization"));
     if (userId) {
       const allowed = await checkRateLimit(supabase, userId);
       if (!allowed) {
-        return new Response(
-          JSON.stringify({ error: "Límite de solicitudes excedido. Máximo 5 análisis por minuto." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" } }
+        return jsonResponse(
+          { error: "Límite de solicitudes excedido. Máximo 5 análisis por minuto." },
+          429,
+          { "Retry-After": "60" }
         );
       }
     }
 
-    const { photoBase64, selectedMood, selectedMomentType, selectedTags, newMusicPercentage } = body;
+    const {
+      photoBase64,
+      selectedMood = "relajado",
+      selectedMomentType = "tranquilo",
+      selectedTags = [],
+      newMusicPercentage = 50,
+    } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
@@ -481,15 +495,15 @@ Analiza colores, iluminación, expresiones, ambiente y contexto visual para dete
     const musicProfile = buildMusicProfile(photoAnalysis, selectedMood, selectedMomentType, newMusicPercentage);
     console.log("Perfil musical generado:", JSON.stringify(musicProfile));
 
-    return new Response(
-      JSON.stringify({ success: true, photoAnalysis, musicProfile, warning: aiWarning }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonResponse({ success: true, photoAnalysis, musicProfile, warning: aiWarning });
   } catch (error: any) {
     console.error("Error en analyze-photo:", error);
-    return new Response(
-      JSON.stringify({ error: error.message || "Error desconocido" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    const fallbackAnalysis = fallbackPhotoAnalysis("relajado", "tranquilo");
+    return jsonResponse({
+      success: true,
+      photoAnalysis: fallbackAnalysis,
+      musicProfile: buildMusicProfile(fallbackAnalysis, "relajado", "tranquilo", 50),
+      warning: "server_fallback",
+    });
   }
 });

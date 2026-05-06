@@ -76,35 +76,50 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
   const [photoInsight, setPhotoInsight] = useState<string | null>(null);
   const [photoMusicProfile, setPhotoMusicProfile] = useState<MusicProfile | null>(null);
   const [photoError, setPhotoError] = useState<PhotoAnalysisErrorCode | null>(null);
+  const [photoAnalysisSignature, setPhotoAnalysisSignature] = useState("");
   const [backendReady] = useState<boolean>(isPhotoAnalysisConfigured());
 
-  const runPhotoAnalysis = async (compressedBase64: string) => {
+  const getAnalysisSignature = (photo = photoPreview) => JSON.stringify({
+    photo: photo ? photo.slice(0, 80) : "",
+    mood: selectedMood,
+    moment: selectedMomentType,
+    tags: selectedTags.map((t) => `${t.type}:${t.value}`).sort(),
+    discovery: newMusicPercentage[0],
+  });
+
+  const runPhotoAnalysis = async (compressedBase64: string, signature = getAnalysisSignature()) => {
     setAnalyzingPhoto(true);
     setPhotoError(null);
 
-    const result = await analyzePhotoWithRetry({
-      photoBase64: compressedBase64,
-      selectedMood,
-      selectedMomentType,
-      selectedTags,
-      newMusicPercentage: newMusicPercentage[0],
-    });
+    try {
+      const result = await analyzePhotoWithRetry({
+        photoBase64: compressedBase64,
+        selectedMood,
+        selectedMomentType,
+        selectedTags,
+        newMusicPercentage: newMusicPercentage[0],
+      });
 
-    if (result.data?.photoAnalysis) {
-      const analysis = result.data.photoAnalysis as unknown as PhotoAnalysis;
-      setPhotoAnalysis(analysis);
-      setPhotoMusicProfile((result.data.musicProfile as unknown as MusicProfile) ?? null);
-      const insight = getPhotoInsight(analysis);
-      setPhotoInsight(insight);
-      if (insight) toast.success(insight);
-    } else {
+      if (result.data?.photoAnalysis) {
+        const analysis = result.data.photoAnalysis as unknown as PhotoAnalysis;
+        const musicProfile = (result.data.musicProfile as unknown as MusicProfile) ?? null;
+        setPhotoAnalysis(analysis);
+        setPhotoMusicProfile(musicProfile);
+        setPhotoAnalysisSignature(signature);
+        const insight = getPhotoInsight(analysis);
+        setPhotoInsight(insight);
+        if (insight) toast.success(insight);
+        return { analysis, musicProfile };
+      }
+
       const code = result.error ?? "unknown";
       console.error(`Photo analysis failed after ${result.attempts} attempts:`, code);
       setPhotoError(code);
       toast.error(describePhotoAnalysisError(code));
+      return null;
+    } finally {
+      setAnalyzingPhoto(false);
     }
-
-    setAnalyzingPhoto(false);
   };
 
   const handlePhotoChange = async (file: File) => {
@@ -121,7 +136,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
       if (!backendReady) {
         toast.message("Analizando localmente mientras se publica el backend de IA.");
       }
-      await runPhotoAnalysis(compressed);
+      await runPhotoAnalysis(compressed, getAnalysisSignature(compressed));
     };
     reader.readAsDataURL(file);
   };
@@ -137,6 +152,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
     setPhotoInsight(null);
     setPhotoMusicProfile(null);
     setPhotoError(null);
+    setPhotoAnalysisSignature("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -148,10 +164,22 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
 
     setLoading(true);
     try {
-      // Photo analysis is performed at upload time (with retries) and the
-      // result is cached in state. handleSubmit just consumes it.
-      const currentPhotoAnalysis = photoAnalysis;
-      const musicProfile: MusicProfile | null = photoMusicProfile;
+      const signature = getAnalysisSignature();
+      let currentPhotoAnalysis = photoAnalysis;
+      let musicProfile: MusicProfile | null = photoMusicProfile;
+
+      // The user may upload the photo first and choose mood/moment/tags after.
+      // Re-analyze right before generation when those inputs changed so the
+      // photo -> music profile path is always current, not stale.
+      if (photoPreview && (!currentPhotoAnalysis || photoAnalysisSignature !== signature)) {
+        const refreshed = await runPhotoAnalysis(photoPreview, signature);
+        if (refreshed) {
+          currentPhotoAnalysis = refreshed.analysis;
+          musicProfile = refreshed.musicProfile;
+        } else if (!currentPhotoAnalysis) {
+          toast.message("Seguiremos con una playlist local para no bloquearte.");
+        }
+      }
 
       const playlistTracks = generateSmartPlaylist(
         selectedMood,
@@ -199,7 +227,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         localStorage.setItem("fryda_experiences", JSON.stringify(experiences));
       } catch {
         const trimmed = experiences.slice(-20);
-        try { localStorage.setItem("fryda_experiences", JSON.stringify(trimmed)); } catch {}
+        try { localStorage.setItem("fryda_experiences", JSON.stringify(trimmed)); } catch { console.warn("Experience storage unavailable"); }
       }
 
       const playlistId = Date.now().toString();
@@ -226,7 +254,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         localStorage.setItem("fryda_playlists", JSON.stringify(playlists));
       } catch {
         const trimmed = playlists.slice(-50);
-        try { localStorage.setItem("fryda_playlists", JSON.stringify(trimmed)); } catch {}
+        try { localStorage.setItem("fryda_playlists", JSON.stringify(trimmed)); } catch { console.warn("Playlist storage unavailable"); }
       }
 
       const tracks = tracksToSave.map((track, index) => ({
@@ -243,7 +271,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
           localStorage.setItem("fryda_tracks", JSON.stringify(allTracks));
         } catch {
           const trimmed = allTracks.slice(-2000);
-          try { localStorage.setItem("fryda_tracks", JSON.stringify(trimmed)); } catch {}
+          try { localStorage.setItem("fryda_tracks", JSON.stringify(trimmed)); } catch { console.warn("Track storage unavailable"); }
         }
       } catch (storageErr) {
         console.warn("Track storage failed, continuing anyway:", storageErr);
@@ -266,10 +294,11 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
       setPhotoInsight(null);
       setPhotoMusicProfile(null);
       setPhotoError(null);
+      setPhotoAnalysisSignature("");
       setNewMusicPercentage([50]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error:", error);
-      toast.error(error.message || "Error al generar playlist");
+      toast.error(error instanceof Error ? error.message : "Error al generar playlist");
     } finally {
       setLoading(false);
     }
