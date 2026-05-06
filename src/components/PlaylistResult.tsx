@@ -216,15 +216,23 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
   };
 
   const openSpotifyPlaylist = () => {
-    const searchQuery = playlist?.emotion ? `${playlist.emotion} playlist` : "playlist";
+    const topTracks = tracks
+      .slice(0, 5)
+      .map((t) => `${t.track_name} ${t.artist}`)
+      .join(" ");
+    const searchQuery = topTracks || (playlist?.emotion ? `${playlist.emotion} playlist` : "playlist");
     window.open(`https://open.spotify.com/search/${encodeURIComponent(searchQuery)}`, "_blank");
-    toast.success("¡Abriendo en Spotify!");
+    toast.success("¡Abriendo en Spotify con tus canciones!");
   };
 
   const openAppleMusicPlaylist = () => {
-    const searchQuery = playlist?.emotion ? `${playlist.emotion} playlist` : "playlist";
+    const topTracks = tracks
+      .slice(0, 5)
+      .map((t) => `${t.track_name} ${t.artist}`)
+      .join(" ");
+    const searchQuery = topTracks || (playlist?.emotion ? `${playlist.emotion} playlist` : "playlist");
     window.open(`https://music.apple.com/search?term=${encodeURIComponent(searchQuery)}`, "_blank");
-    toast.success("¡Abriendo en Apple Music!");
+    toast.success("¡Abriendo en Apple Music con tus canciones!");
   };
 
   const openSpotifySearch = (track: Track) => {

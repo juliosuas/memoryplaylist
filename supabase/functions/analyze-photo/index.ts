@@ -151,6 +151,47 @@ function normalizeAnalysis(raw: any): PhotoAnalysis {
   };
 }
 
+function fallbackPhotoAnalysis(selectedMood: string, selectedMomentType: string): PhotoAnalysis {
+  const moodFromSelected: Record<string, string> = {
+    enamorado: "romantic",
+    "nostálgico": "nostalgic",
+    feliz: "happy",
+    relajado: "peaceful",
+    nervioso: "energetic",
+    triste: "melancholic",
+    reflexivo: "peaceful",
+    motivado: "energetic",
+    rapero: "energetic",
+    esperanzado: "happy",
+    libre: "adventurous",
+  };
+
+  const sceneFromMoment: Record<string, string> = {
+    vacaciones: "beach",
+    fiesta: "party",
+    tranquilo: "indoor",
+    concierto: "concert",
+    noche: "city",
+    inspiracion: "cafe",
+    evento: "party",
+  };
+
+  const highEnergy = ["motivado", "rapero", "libre", "feliz", "nervioso"].includes(selectedMood);
+  const calm = ["relajado", "reflexivo", "triste", "nostálgico"].includes(selectedMood);
+
+  return normalizeAnalysis({
+    dominantColors: calm ? ["cool", "muted"] : highEnergy ? ["warm", "vibrant"] : ["neutral"],
+    lighting: selectedMomentType === "noche" ? "night" : highEnergy ? "bright" : "natural",
+    scene: sceneFromMoment[selectedMomentType] ?? "indoor",
+    mood: moodFromSelected[selectedMood] ?? "peaceful",
+    activity: highEnergy ? "celebrating" : "reflecting",
+    season: selectedMomentType === "vacaciones" ? "summer" : "undefined",
+    timeOfDay: selectedMomentType === "noche" ? "night" : "afternoon",
+    people: "none",
+    energy: highEnergy ? 8 : calm ? 4 : 5,
+  });
+}
+
 interface MusicProfile {
   primaryMoods: string[];
   secondaryMoods: string[];
@@ -418,7 +459,7 @@ Analiza colores, iluminación, expresiones, ambiente y contexto visual para dete
       }
 
       if (!photoAnalysis) {
-        console.warn("Primary model failed 3x, trying fallback model");
+        console.warn("Primary model failed, trying fallback model");
         await sleep(500);
         photoAnalysis = await callModel(fallbackModel, 1);
       }
@@ -427,11 +468,14 @@ Analiza colores, iluminación, expresiones, ambiente y contexto visual para dete
         aiWarning = null;
         console.log("Análisis normalizado:", JSON.stringify(photoAnalysis));
       } else {
-        console.error("All AI attempts exhausted, returning null analysis");
+        console.error("All AI attempts exhausted, using deterministic fallback analysis");
         if (!aiWarning) aiWarning = "ai_unavailable";
+        photoAnalysis = fallbackPhotoAnalysis(selectedMood, selectedMomentType);
       }
     } else if (photoBase64 && !LOVABLE_API_KEY) {
-      console.warn("LOVABLE_API_KEY no configurada; usando perfil musical sin análisis visual IA.");
+      console.warn("LOVABLE_API_KEY no configurada; usando análisis determinístico local.");
+      aiWarning = "local_fallback";
+      photoAnalysis = fallbackPhotoAnalysis(selectedMood, selectedMomentType);
     }
 
     const musicProfile = buildMusicProfile(photoAnalysis, selectedMood, selectedMomentType, newMusicPercentage);

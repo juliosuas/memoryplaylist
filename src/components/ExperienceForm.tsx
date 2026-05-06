@@ -113,16 +113,14 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
     setPhotoMusicProfile(null);
     setPhotoError(null);
 
-    if (!backendReady) {
-      toast.error("El backend de IA no está disponible en este momento.");
-      return;
-    }
-
     const reader = new FileReader();
     reader.onloadend = async () => {
       const raw = reader.result as string;
       const compressed = await resizeImage(raw);
       setPhotoPreview(compressed);
+      if (!backendReady) {
+        toast.message("Analizando localmente mientras se publica el backend de IA.");
+      }
       await runPhotoAnalysis(compressed);
     };
     reader.readAsDataURL(file);
