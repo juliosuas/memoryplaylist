@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { generateSmartPlaylist, getPhotoInsight, PhotoAnalysis, MusicProfile } from "@/lib/playlistGenerator";
+import { saveGeneratedPlaylist } from "@/lib/localPlaylistStore";
 import {
   analyzePhotoWithRetry,
   describePhotoAnalysisError,
@@ -221,16 +222,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         created_at: new Date().toISOString(),
       };
 
-      const experiences = JSON.parse(localStorage.getItem("fryda_experiences") || "[]");
-      experiences.push(experience);
-      try {
-        localStorage.setItem("fryda_experiences", JSON.stringify(experiences));
-      } catch {
-        const trimmed = experiences.slice(-20);
-        try { localStorage.setItem("fryda_experiences", JSON.stringify(trimmed)); } catch { console.warn("Experience storage unavailable"); }
-      }
-
-      const playlistId = Date.now().toString();
+      const playlistId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const moodLabel = MOODS.find((m) => m.id === selectedMood)?.emoji || "";
       const playlistName = currentPhotoAnalysis
         ? `${moodLabel} ${selectedMood} • ${getPhotoInsight(currentPhotoAnalysis)?.split(" ").slice(0, 2).join(" ") || "📸"}`
@@ -248,15 +240,6 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         created_at: new Date().toISOString(),
       };
 
-      const playlists = JSON.parse(localStorage.getItem("fryda_playlists") || "[]");
-      playlists.push(playlist);
-      try {
-        localStorage.setItem("fryda_playlists", JSON.stringify(playlists));
-      } catch {
-        const trimmed = playlists.slice(-50);
-        try { localStorage.setItem("fryda_playlists", JSON.stringify(trimmed)); } catch { console.warn("Playlist storage unavailable"); }
-      }
-
       const tracks = tracksToSave.map((track, index) => ({
         id: `${playlistId}-${index}`,
         playlist_id: playlistId,
@@ -264,17 +247,9 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         created_at: new Date().toISOString(),
       }));
 
-      try {
-        const allTracks = JSON.parse(localStorage.getItem("fryda_tracks") || "[]");
-        allTracks.push(...tracks);
-        try {
-          localStorage.setItem("fryda_tracks", JSON.stringify(allTracks));
-        } catch {
-          const trimmed = allTracks.slice(-2000);
-          try { localStorage.setItem("fryda_tracks", JSON.stringify(trimmed)); } catch { console.warn("Track storage unavailable"); }
-        }
-      } catch (storageErr) {
-        console.warn("Track storage failed, continuing anyway:", storageErr);
+      const persisted = saveGeneratedPlaylist({ experience, playlist, tracks });
+      if (!persisted) {
+        toast.message("Tu navegador no permitió guardar todo, pero abriremos tu playlist ahora mismo.");
       }
 
       // Dramatic wait — shortened so the user reaches the playlist faster.

@@ -88,11 +88,15 @@ npm run dev
 
 ### Environment Variables
 
-| Variable | Description |
-|---|---|
-| `VITE_SUPABASE_URL` | Supabase project URL |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/public key |
-| `LOVABLE_API_KEY` | AI Gateway key (Edge Functions) |
+Copy `.env.example` for local development. In Lovable, set the `VITE_` variables in Project Settings → Environment Variables.
+
+| Variable | Where | Required | Description |
+|---|---|---:|---|
+| `VITE_SUPABASE_URL` | Lovable/Vite frontend | Yes for live photo AI | Supabase project URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Lovable/Vite frontend | Yes for live photo AI | Supabase anon/public key |
+| `LOVABLE_API_KEY` | Supabase Edge Function secret | Optional fallback-safe | AI Gateway key used server-side only |
+
+If Supabase Edge Functions or `LOVABLE_API_KEY` are unavailable, Fryda intentionally fails open: the frontend still creates a local generated playlist and opens it in YouTube, Spotify, or Apple Music search.
 
 ## 📁 Project Structure
 

@@ -3,6 +3,7 @@ import { Music, Heart, Sparkles, ArrowLeft, ExternalLink } from "lucide-react";
 import { SharePlaylist } from "@/components/fryda/SharePlaylist";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { loadGeneratedPlaylist, saveLikedTrack, type StoredPlaylist } from "@/lib/localPlaylistStore";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
 
@@ -99,7 +100,7 @@ const SCENE_LABELS: Record<string, string> = {
   concert: "concierto", travel: "viaje", home: "hogar", nature: "naturaleza",
 };
 
-function buildDescription(playlist: any): string {
+function buildDescription(playlist: StoredPlaylist): string {
   const parts: string[] = [];
 
   if (playlist.photo_analysis) {
@@ -158,17 +159,16 @@ function TrackCover({ src, alt }: { src?: string; alt: string }) {
 }
 
 export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
-  const [playlist, setPlaylist] = useState<any>(null);
+  const [playlist, setPlaylist] = useState<StoredPlaylist | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const playlists = JSON.parse(localStorage.getItem("fryda_playlists") || "[]");
-    const playlistData = playlists.find((p: any) => p.id === playlistId);
-    if (playlistData) setPlaylist(playlistData);
-
-    const allTracks = JSON.parse(localStorage.getItem("fryda_tracks") || "[]");
-    setTracks(allTracks.filter((t: any) => t.playlist_id === playlistId));
+    const bundle = loadGeneratedPlaylist(playlistId);
+    if (bundle) {
+      setPlaylist(bundle.playlist);
+      setTracks(bundle.tracks);
+    }
     setLoading(false);
   }, [playlistId]);
 
@@ -197,14 +197,12 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
   }, [playlist]);
 
   const handleLike = (track: Track) => {
-    const prefs = JSON.parse(localStorage.getItem("fryda_preferences") || "[]");
-    prefs.push({ id: Date.now().toString(), track_name: track.track_name, artist: track.artist, liked: true, created_at: new Date().toISOString() });
-    try { localStorage.setItem("fryda_preferences", JSON.stringify(prefs)); } catch { localStorage.setItem("fryda_preferences", JSON.stringify(prefs.slice(-500))); }
-    toast.success("Guardado en favoritos");
+    const saved = saveLikedTrack(track);
+    toast.success(saved ? "Guardado en favoritos" : "Favorito marcado para esta sesión");
   };
 
   const openYouTubePlaylist = () => {
-    const ids = tracks.map((t) => (t as any).youtubeId).filter(Boolean);
+    const ids = tracks.map((t) => t.youtubeId).filter(Boolean);
     if (ids.length) {
       window.open(`https://www.youtube.com/watch_videos?video_ids=${ids.join(",")}`, "_blank");
     } else {
