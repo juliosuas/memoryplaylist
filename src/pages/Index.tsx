@@ -29,7 +29,7 @@ const Index = () => {
             </div>
             <div className="text-left">
               <h1 className="text-xl font-bold text-gradient">VibePlaylist</h1>
-              <p className="text-xs text-muted-foreground -mt-0.5">with Fryda as your music guide</p>
+              <p className="text-xs text-muted-foreground -mt-0.5">Every memory has its song</p>
             </div>
           </button>
           <ThemeToggle />
@@ -45,7 +45,7 @@ const Index = () => {
               VibePlaylist
             </h2>
             <p className="text-muted-foreground text-lg max-w-md mx-auto">
-              Sube una foto, cuéntale el recuerdo a Fryda y recibe una lista de canciones para buscar y abrir en tus apps de música.
+              Sube una foto y Fryda arma una playlist simple para ese momento.
             </p>
           </div>
         )}

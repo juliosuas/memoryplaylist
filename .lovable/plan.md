@@ -2,7 +2,7 @@
 
 ## Goal
 
-Prepare the app for the Lovable contest under the public name **VibePlaylist** while keeping **Fryda** as the useful in-product personality and music guide.
+Prepare the app for the Lovable contest under the public name **VibePlaylist** while keeping the flow intentionally simple: photo upload, optional music taste, generated tracklist, music-service open/search actions, and basic sharing.
 
 ## Public positioning
 
@@ -18,9 +18,10 @@ Prepare the app for the Lovable contest under the public name **VibePlaylist** w
 - [x] User-facing service actions avoid implying Spotify/Apple playlist creation.
 - [x] README contains contest evidence placeholders.
 - [x] README explicitly discloses Spotify/Apple are search/open actions.
+- [x] UI rolled back to the previous simple card-based flow on 2026-05-26.
 - [x] `npm run lint` result recorded: PASS on 2026-05-26 with 7 existing shadcn fast-refresh warnings.
 - [x] `npm run build` result recorded: PASS on 2026-05-26.
-- [x] No push, deploy, or Lovable sync until Julio asks for it.
+- [x] Julio authorized push on 2026-05-26.
 
 ## Submission evidence placeholders
 
@@ -41,7 +42,7 @@ Allowed for this pass:
 - `index.html`
 - `README.md`
 - `.lovable/plan.md`
-- Small copy-only frontend changes in `src/pages/Index.tsx` or visible labels
+- Rollback/simplification changes in `src/pages/Index.tsx`, `src/components/ExperienceForm.tsx`, and `src/components/PlaylistResult.tsx`
 
 Do not change for this pass:
 

@@ -2,7 +2,7 @@
 
 **Every memory has its song.**
 
-VibePlaylist turns a photo and a short memory into an AI-guided music recommendation list. Fryda is the in-app guide: it reads the mood, scene, energy, and memory text, then suggests tracks that fit the moment.
+VibePlaylist turns a photo into an AI-guided music recommendation list. Fryda is the in-app guide: it reads the mood, scene, and energy, then suggests tracks that fit the moment.
 
 Important product truth: VibePlaylist does not create real playlists inside Spotify or Apple Music. It generates a local tracklist and opens search/listening actions in YouTube, Spotify, and Apple Music so users can review and save songs in the service they prefer.
 
@@ -10,7 +10,7 @@ Important product truth: VibePlaylist does not create real playlists inside Spot
 
 - Public name: **VibePlaylist**
 - Personality retained: **Fryda**, the friendly music guide inside the product
-- Demo promise: upload a memory photo, describe the vibe, get a scored tracklist, share the result, and open honest music-service searches
+- Demo promise: upload a memory photo, get a scored tracklist, share the result, and open honest music-service searches
 - Non-goal for contest build: native Spotify/Apple playlist creation or account-connected music writes
 
 ## ✨ Features
