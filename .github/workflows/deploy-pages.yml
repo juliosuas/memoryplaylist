@@ -1,4 +1,4 @@
-name: Deploy VibePlaylist to GitHub Pages
+name: Deploy Memory Playlist to GitHub Pages
 
 on:
   push:

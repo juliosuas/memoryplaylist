@@ -32,7 +32,7 @@ export interface StoredPlaylistBundle {
 
 declare global {
   interface Window {
-    __vibePlaylistLatestPlaylist?: StoredPlaylistBundle;
+    __memoryPlaylistLatestPlaylist?: StoredPlaylistBundle;
   }
 }
 
@@ -73,7 +73,7 @@ function writeArray<T>(key: string, items: T[], trimTo: number): boolean {
 
 export function saveGeneratedPlaylist(bundle: StoredPlaylistBundle): boolean {
   if (typeof window !== "undefined") {
-    window.__vibePlaylistLatestPlaylist = bundle;
+    window.__memoryPlaylistLatestPlaylist = bundle;
   }
 
   const experiencesOk = bundle.experience
@@ -87,7 +87,7 @@ export function saveGeneratedPlaylist(bundle: StoredPlaylistBundle): boolean {
 }
 
 export function loadGeneratedPlaylist(playlistId: string): StoredPlaylistBundle | null {
-  const memoryBundle = typeof window !== "undefined" ? window.__vibePlaylistLatestPlaylist : undefined;
+  const memoryBundle = typeof window !== "undefined" ? window.__memoryPlaylistLatestPlaylist : undefined;
   if (memoryBundle?.playlist.id === playlistId) {
     return memoryBundle;
   }
