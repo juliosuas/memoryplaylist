@@ -106,6 +106,8 @@ const path = require('path');
   const paywallContext = await browser.newContext();
   const paywallPage = await paywallContext.newPage();
   await paywallPage.goto(baseUrl, { waitUntil: 'networkidle', timeout: 30000 });
+  const checkoutSuccessUrl = new URL(baseUrl);
+  checkoutSuccessUrl.searchParams.set('checkout', 'success');
   for (let i = 0; i < 3; i += 1) {
     await paywallPage.locator('input[type="file"]').setInputFiles(imgPath);
     await paywallPage.getByAltText('Tu recuerdo').waitFor({ timeout: 10000 });
@@ -118,7 +120,7 @@ const path = require('path');
   if (!generateDisabled) throw new Error('Free limit paywall did not disable playlist generation after 3 playlists');
   await paywallPage.evaluate((url) => {
     localStorage.setItem('memoryplaylist_checkout_mock_url', url);
-  }, `${baseUrl}?checkout=success`);
+  }, checkoutSuccessUrl.toString());
   await paywallPage.getByRole('button', { name: /Desbloquear/i }).click();
   await paywallPage.waitForFunction(() => {
     const raw = localStorage.getItem('memoryplaylist_access');
