@@ -27,6 +27,35 @@ interface ScoredTrack {
   isKnown: boolean;
 }
 
+const artistKey = (track: TrackData) => track.artist.trim().toLowerCase();
+
+function addWithArtistLimit(
+  target: TrackData[],
+  candidates: TrackData[],
+  artistCount: Map<string, number>,
+  usedIds: Set<string>,
+  targetSize: number,
+  maxPerArtist = 2
+) {
+  const overflow: TrackData[] = [];
+
+  for (const track of candidates) {
+    if (usedIds.has(track.id) || target.length >= targetSize) continue;
+    const key = artistKey(track);
+    const count = artistCount.get(key) ?? 0;
+
+    if (count < maxPerArtist) {
+      target.push(track);
+      usedIds.add(track.id);
+      artistCount.set(key, count + 1);
+    } else {
+      overflow.push(track);
+    }
+  }
+
+  return overflow;
+}
+
 // Función para mezclar array
 function shuffleArray<T>(array: T[]): T[] {
   const shuffled = [...array];
@@ -246,52 +275,37 @@ export function generateSmartPlaylist(
   const countNew = Math.round(remainingSlots * (clampedNewPct / 100));
   const countKnown = remainingSlots - countNew;
 
-  const selectedKnown = shuffleArray(knownTracks.slice(0, Math.max(countKnown * 3, 15)))
-    .slice(0, countKnown)
-    .map((t) => t.track);
-
-  const selectedNew = shuffleArray(newTracks.slice(0, Math.max(countNew * 3, 20)))
-    .slice(0, countNew)
-    .map((t) => t.track);
-
-  let playlist = [...pinnedSelection, ...selectedKnown, ...selectedNew];
-
-  // Completar si faltan tracks
-  if (playlist.length < targetSize) {
-    const already = new Set(playlist.map((t) => t.id));
-
-    const moodFill = TRACK_CATALOG.filter(
-      (t) => effectiveMoods.some((m) => t.moods.includes(m)) && !already.has(t.id)
-    );
-
-    const fallbackFill = TRACK_CATALOG.filter((t) => !already.has(t.id));
-
-    const fillFrom = moodFill.length > 0 ? moodFill : fallbackFill;
-    playlist = [...playlist, ...shuffleArray(fillFrom).slice(0, targetSize - playlist.length)];
-  }
+  const selectedKnown = shuffleArray(knownTracks.slice(0, Math.max(countKnown * 4, 25))).map((t) => t.track);
+  const selectedNew = shuffleArray(newTracks.slice(0, Math.max(countNew * 4, 30))).map((t) => t.track);
 
   // === DIVERSIDAD POR ARTISTA ===
-  // Máximo 2 pistas del mismo artista (excepto pineadas por tag explícito).
+  // Máximo 2 pistas del mismo artista antes de recurrir a overflow.
   const artistCount = new Map<string, number>();
+  const usedIds = new Set(pinnedSelection.map((t) => t.id));
   pinnedSelection.forEach((t) => {
-    const k = t.artist.toLowerCase();
+    const k = artistKey(t);
     artistCount.set(k, (artistCount.get(k) ?? 0) + 1);
   });
+
   const diversified: TrackData[] = [...pinnedSelection];
-  const overflow: TrackData[] = [];
-  for (const t of playlist.slice(pinnedSelection.length)) {
-    const k = t.artist.toLowerCase();
-    const count = artistCount.get(k) ?? 0;
-    if (count < 2) {
-      diversified.push(t);
-      artistCount.set(k, count + 1);
-    } else {
-      overflow.push(t);
-    }
-    if (diversified.length >= targetSize) break;
-  }
+  const overflow = [
+    ...addWithArtistLimit(diversified, selectedKnown.slice(0, countKnown), artistCount, usedIds, targetSize),
+    ...addWithArtistLimit(diversified, selectedNew.slice(0, countNew), artistCount, usedIds, targetSize),
+  ];
+
+  // Completar primero con tracks relevantes respetando diversidad.
+  const moodFill = relevantTracks
+    .map((item) => item.track)
+    .filter((track) => effectiveMoods.some((m) => track.moods.includes(m)));
+  const broadFill = relevantTracks.map((item) => item.track);
+  addWithArtistLimit(diversified, shuffleArray([...moodFill, ...broadFill]), artistCount, usedIds, targetSize);
+
+  // Último recurso: catálogo completo, todavía respetando max 2 por artista.
+  addWithArtistLimit(diversified, shuffleArray(TRACK_CATALOG), artistCount, usedIds, targetSize);
+
   if (diversified.length < targetSize) {
-    diversified.push(...overflow.slice(0, targetSize - diversified.length));
+    const remaining = overflow.filter((track) => !usedIds.has(track.id));
+    diversified.push(...remaining.slice(0, targetSize - diversified.length));
   }
 
   return diversified.slice(0, targetSize);

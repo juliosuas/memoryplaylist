@@ -30,8 +30,14 @@ const path = require('path');
   await page.getByText(/Lectura de la foto|Ajustaré la playlist/i).waitFor({ timeout: 12000 });
   await page.screenshot({ path: path.join(outDir, '02-form-filled.png'), fullPage: true });
   await page.getByRole('button', { name: /Crear playlist/i }).click();
-  await page.getByRole('button', { name: /YouTube/i }).waitFor({ timeout: 5000 });
-  await page.getByRole('button', { name: /Spotify/i }).waitFor({ timeout: 5000 });
+  await page.getByRole('button', { name: /Abrir en YouTube/i }).waitFor({ timeout: 5000 });
+  await page.getByRole('button', { name: /Buscar en Spotify/i }).waitFor({ timeout: 5000 });
+  await page.getByRole('button', { name: /Buscar en Apple/i }).waitFor({ timeout: 5000 });
+  const stored = await page.evaluate(() => {
+    const raw = localStorage.getItem('memoryplaylist_playlists') || localStorage.getItem('fryda_playlists');
+    return raw ? JSON.parse(raw) : [];
+  });
+  if (!stored?.[0]?.photo_preview) throw new Error('Generated playlist did not persist photo_preview for share cards');
   await page.screenshot({ path: path.join(outDir, '03-playlist-result.png'), fullPage: true });
 
   await page.getByRole('button', { name: /Compartir/i }).click();
@@ -46,13 +52,15 @@ const path = require('path');
   const sharedPage = await sharedContext.newPage();
   await sharedPage.goto(sharedUrl, { waitUntil: 'networkidle', timeout: 30000 });
   await sharedPage.getByText(/Nueva experiencia/).waitFor({ timeout: 10000 });
-  await sharedPage.getByRole('button', { name: /YouTube/i }).waitFor({ timeout: 5000 });
+  await sharedPage.getByRole('button', { name: /Abrir en YouTube/i }).waitFor({ timeout: 5000 });
+  await sharedPage.getByRole('button', { name: /Buscar en Spotify/i }).waitFor({ timeout: 5000 });
+  await sharedPage.getByRole('button', { name: /Buscar en Apple/i }).waitFor({ timeout: 5000 });
   await sharedPage.screenshot({ path: path.join(outDir, '04-shared-link-result.png'), fullPage: true });
   await sharedContext.close();
 
   const [ytPopup] = await Promise.all([
     context.waitForEvent('page', { timeout: 10000 }),
-    page.getByRole('button', { name: /YouTube/i }).click(),
+    page.getByRole('button', { name: /Abrir en YouTube/i }).click(),
   ]);
   await ytPopup.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {});
   const ytUrl = ytPopup.url();
@@ -60,19 +68,36 @@ const path = require('path');
 
   const [spPopup] = await Promise.all([
     context.waitForEvent('page', { timeout: 10000 }),
-    page.getByRole('button', { name: /Spotify/i }).click(),
+    page.getByRole('button', { name: /Buscar en Spotify/i }).click(),
   ]);
   await spPopup.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {});
   const spUrl = spPopup.url();
   await spPopup.close().catch(() => {});
 
+  const [applePopup] = await Promise.all([
+    context.waitForEvent('page', { timeout: 10000 }),
+    page.getByRole('button', { name: /Buscar en Apple/i }).click(),
+  ]);
+  await applePopup.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {});
+  const appleUrl = applePopup.url();
+  await applePopup.close().catch(() => {});
+
   if (!/youtube\.com\/(watch|watch_videos|results)/.test(ytUrl)) throw new Error(`Unexpected YouTube popup URL: ${ytUrl}`);
   if (!/open\.spotify\.com\/search\//.test(spUrl)) throw new Error(`Unexpected Spotify popup URL: ${spUrl}`);
+  if (!/music\.apple\.com\/(?:[a-z]{2}\/)?search/.test(appleUrl)) throw new Error(`Unexpected Apple Music popup URL: ${appleUrl}`);
   const resultText = (await page.locator('body').innerText()).slice(0, 1000);
   if (!/Nueva experiencia/.test(resultText)) throw new Error('Playlist result did not render expected navigation');
   if (events.pageErrors.length) throw new Error(`Page errors: ${events.pageErrors.join(' | ')}`);
 
-  console.log(JSON.stringify({ ok: true, youtubeUrl: ytUrl, spotifyUrl: spUrl, sharedUrlOk: true, screenshots: ['test-artifacts/01-home.png','test-artifacts/02-form-filled.png','test-artifacts/03-playlist-result.png','test-artifacts/04-shared-link-result.png'], console: events.console.slice(0, 10) }, null, 2));
+  const mobileContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true });
+  const mobilePage = await mobileContext.newPage();
+  await mobilePage.goto(sharedUrl, { waitUntil: 'networkidle', timeout: 30000 });
+  await mobilePage.getByText(/Nueva experiencia/).waitFor({ timeout: 10000 });
+  await mobilePage.getByRole('button', { name: /Buscar en Apple/i }).waitFor({ timeout: 5000 });
+  await mobilePage.screenshot({ path: path.join(outDir, '05-mobile-shared-result.png'), fullPage: true });
+  await mobileContext.close();
+
+  console.log(JSON.stringify({ ok: true, youtubeUrl: ytUrl, spotifyUrl: spUrl, appleUrl, sharedUrlOk: true, photoPreviewStored: true, screenshots: ['test-artifacts/01-home.png','test-artifacts/02-form-filled.png','test-artifacts/03-playlist-result.png','test-artifacts/04-shared-link-result.png','test-artifacts/05-mobile-shared-result.png'], console: events.console.slice(0, 10) }, null, 2));
   await browser.close();
 })().catch(async (err) => {
   console.error(err);

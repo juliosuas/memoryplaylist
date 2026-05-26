@@ -16,7 +16,7 @@ export interface TrackData {
 }
 
 // Catálogo ampliado de canciones con moods que coinciden con el formulario
-export const TRACK_CATALOG: TrackData[] = [
+const RAW_TRACK_CATALOG: TrackData[] = [
   // ============ ENAMORADO ============
   { id: "e001", track_name: "Perfect", artist: "Ed Sheeran", album: "÷", album_cover: "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/15/e6/e8/15e6e8a4-4190-6a8b-86c3-ab4a51b88288/190295851286.jpg/300x300bb.jpg", moods: ["enamorado", "feliz"], moment_types: ["noche", "evento"], youtubeId: "2Vv-BfVoq4g" },
   { id: "e002", track_name: "All of Me", artist: "John Legend", album: "Love in the Future", album_cover: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/22/71/b9/2271b906-85b3-06ee-e611-489b91df0b73/886444160742.jpg/300x300bb.jpg", moods: ["enamorado", "reflexivo"], moment_types: ["noche"], youtubeId: "450p7goxZqg" },
@@ -150,7 +150,6 @@ export const TRACK_CATALOG: TrackData[] = [
   { id: "m020", track_name: "Alright", artist: "Kendrick Lamar", album: "To Pimp a Butterfly", album_cover: "https://cdn-images.dzcdn.net/images/cover/00dd0da365a94b1829302d6b7fec70e6/500x500-000000-80-0-0.jpg", moods: ["motivado", "esperanzado", "rapero"], moment_types: ["evento"], youtubeId: "Z-48u_uWMHY" },
   
   // ============ ESPERANZADO ============
-  { id: "es001", track_name: "Here Comes The Sun", artist: "The Beatles", album: "Abbey Road", album_cover: "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/df/db/61/dfdb615d-47f8-06e9-9533-b96daccc029f/18UMGIM31076.rgb.jpg/300x300bb.jpg", moods: ["esperanzado", "feliz"], moment_types: ["vacaciones", "tranquilo"], youtubeId: "KQetemT1sWc" },
   { id: "es002", track_name: "Don't Worry Be Happy", artist: "Bobby McFerrin", album: "Simple Pleasures", album_cover: "https://cdn-images.dzcdn.net/images/cover/121ed33882c127248831b9aacfe5220b/500x500-000000-80-0-0.jpg", moods: ["esperanzado", "feliz"], moment_types: ["vacaciones", "tranquilo"], youtubeId: "d-diB65scQU" },
   { id: "es003", track_name: "Beautiful Day", artist: "U2", album: "All That You Can't Leave Behind", album_cover: "https://cdn-images.dzcdn.net/images/cover/b37725cd9d9771d7674df22fafdcc0a2/500x500-000000-80-0-0.jpg", moods: ["esperanzado", "motivado"], moment_types: ["evento", "vacaciones"], youtubeId: "co6WMzDOh1o" },
   { id: "es004", track_name: "I Gotta Feeling", artist: "The Black Eyed Peas", album: "The E.N.D.", album_cover: "https://cdn-images.dzcdn.net/images/cover/ea30377840f4ef9ac62406c5e16e9c4b/500x500-000000-80-0-0.jpg", moods: ["esperanzado", "feliz"], moment_types: ["fiesta", "evento"], youtubeId: "uSD4vsh1zDA" },
@@ -208,7 +207,165 @@ export const TRACK_CATALOG: TrackData[] = [
   { id: "c034", track_name: "Reptilia", artist: "The Strokes", album: "Room on Fire", album_cover: "https://cdn-images.dzcdn.net/images/cover/3d1246b483aefa9bd0bcd07dfc926be8/500x500-000000-80-0-0.jpg", moods: ["motivado", "nervioso"], moment_types: ["concierto"], youtubeId: "b8-tXG8KrWs" },
   { id: "c035", track_name: "Borderline", artist: "Tame Impala", album: "The Slow Rush", album_cover: "https://cdn-images.dzcdn.net/images/cover/d8eb61bd4becf79a602a75b69eebde7d/500x500-000000-80-0-0.jpg", moods: ["nostálgico", "motivado"], moment_types: ["fiesta"], youtubeId: "2g5xkLqIElU" },
   { id: "c036", track_name: "Tokyo Drifting", artist: "Glass Animals", album: "Dreamland", album_cover: "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/da/8b/77/da8b7731-6f4f-eacf-5e74-8b23389eefa1/20UMGIM03371.rgb.jpg/300x300bb.jpg", moods: ["motivado", "libre"], moment_types: ["fiesta"], youtubeId: "ijw4fa75WQ0" },
+
+  // ============ LATAM, INDIE Y POP PARA LANZAMIENTO ============
+  { id: "mx001", track_name: "Soñé", artist: "Zoé", album: "Rocanlover", album_cover: "", moods: ["nostálgico", "enamorado", "reflexivo"], moment_types: ["noche", "concierto"], genres: ["rock", "indie"] },
+  { id: "mx002", track_name: "Labios Rotos", artist: "Zoé", album: "Música de Fondo", album_cover: "", moods: ["enamorado", "nostálgico"], moment_types: ["noche", "concierto"], genres: ["rock", "indie"] },
+  { id: "mx003", track_name: "No Dejes Que...", artist: "Caifanes", album: "El Silencio", album_cover: "", moods: ["nostálgico", "motivado"], moment_types: ["concierto", "noche"], genres: ["rock"] },
+  { id: "mx004", track_name: "Afuera", artist: "Caifanes", album: "El Nervio del Volcán", album_cover: "", moods: ["libre", "motivado", "nostálgico"], moment_types: ["concierto"], genres: ["rock"] },
+  { id: "mx005", track_name: "De Música Ligera", artist: "Soda Stereo", album: "Canción Animal", album_cover: "", moods: ["motivado", "nostálgico"], moment_types: ["concierto", "fiesta"], genres: ["rock"] },
+  { id: "mx006", track_name: "Persiana Americana", artist: "Soda Stereo", album: "Signos", album_cover: "", moods: ["nervioso", "motivado"], moment_types: ["noche", "concierto"], genres: ["rock"] },
+  { id: "mx007", track_name: "Día de Enero", artist: "Shakira", album: "Fijación Oral, Vol. 1", album_cover: "", moods: ["enamorado", "relajado"], moment_types: ["noche", "tranquilo"], genres: ["pop"] },
+  { id: "mx008", track_name: "Antología", artist: "Shakira", album: "Pies Descalzos", album_cover: "", moods: ["enamorado", "nostálgico"], moment_types: ["despedida", "noche"], genres: ["pop"] },
+  { id: "mx009", track_name: "Hasta la Raíz", artist: "Natalia Lafourcade", album: "Hasta la Raíz", album_cover: "", moods: ["nostálgico", "reflexivo", "esperanzado"], moment_types: ["tranquilo", "despedida"], genres: ["folk", "pop"] },
+  { id: "mx010", track_name: "Tú Sí Sabes Quererme", artist: "Natalia Lafourcade", album: "Musas", album_cover: "", moods: ["enamorado", "feliz", "relajado"], moment_types: ["tranquilo", "noche"], genres: ["folk", "pop"] },
+  { id: "mx011", track_name: "Ahora Te Puedes Marchar", artist: "Luis Miguel", album: "Soy Como Quiero Ser", album_cover: "", moods: ["libre", "feliz", "nostálgico"], moment_types: ["fiesta", "despedida"], genres: ["pop"] },
+  { id: "mx012", track_name: "La Incondicional", artist: "Luis Miguel", album: "Busca Una Mujer", album_cover: "", moods: ["enamorado", "nostálgico"], moment_types: ["noche"], genres: ["pop"] },
+  { id: "mx013", track_name: "Querida", artist: "Juan Gabriel", album: "Recuerdos II", album_cover: "", moods: ["enamorado", "triste", "nostálgico"], moment_types: ["despedida", "concierto"], genres: ["pop"] },
+  { id: "mx014", track_name: "Amor Eterno", artist: "Juan Gabriel", album: "Recuerdos", album_cover: "", moods: ["triste", "nostálgico", "reflexivo"], moment_types: ["despedida"], genres: ["pop"] },
+  { id: "mx015", track_name: "Nunca Es Suficiente", artist: "Los Ángeles Azules & Natalia Lafourcade", album: "De Plaza en Plaza", album_cover: "", moods: ["enamorado", "nostálgico", "feliz"], moment_types: ["fiesta", "noche"], genres: ["cumbia", "pop"] },
+  { id: "mx016", track_name: "El Listón de Tu Pelo", artist: "Los Ángeles Azules", album: "Inolvidables", album_cover: "", moods: ["feliz", "enamorado"], moment_types: ["fiesta"], genres: ["cumbia"] },
+  { id: "mx017", track_name: "Eres", artist: "Café Tacvba", album: "Cuatro Caminos", album_cover: "", moods: ["enamorado", "nostálgico"], moment_types: ["noche", "tranquilo"], genres: ["rock", "indie"] },
+  { id: "mx018", track_name: "Quiero Ver", artist: "Café Tacvba", album: "Sino", album_cover: "", moods: ["feliz", "enamorado"], moment_types: ["tranquilo", "fiesta"], genres: ["rock", "indie"] },
+  { id: "mx019", track_name: "Lucha de Gigantes", artist: "Nacha Pop", album: "El Momento", album_cover: "", moods: ["reflexivo", "nostálgico", "triste"], moment_types: ["noche", "despedida"], genres: ["rock"] },
+  { id: "mx020", track_name: "Rayando el Sol", artist: "Maná", album: "Falta Amor", album_cover: "", moods: ["enamorado", "nostálgico"], moment_types: ["concierto", "despedida"], genres: ["rock", "pop"] },
+  { id: "mx021", track_name: "Sweet Disposition", artist: "The Temper Trap", album: "Conditions", album_cover: "", moods: ["libre", "esperanzado", "nostálgico"], moment_types: ["vacaciones", "concierto"], genres: ["indie"] },
+  { id: "mx022", track_name: "Dog Days Are Over", artist: "Florence + The Machine", album: "Lungs", album_cover: "", moods: ["libre", "feliz", "motivado"], moment_types: ["concierto", "evento"], genres: ["indie", "pop"] },
+  { id: "mx023", track_name: "Somewhere Only We Know", artist: "Keane", album: "Hopes and Fears", album_cover: "", moods: ["nostálgico", "esperanzado"], moment_types: ["despedida", "tranquilo"], genres: ["pop", "rock"] },
+  { id: "mx024", track_name: "Young Folks", artist: "Peter Bjorn and John", album: "Writer's Block", album_cover: "", moods: ["feliz", "relajado", "nostálgico"], moment_types: ["fiesta", "vacaciones"], genres: ["indie"] },
+  { id: "mx025", track_name: "Home", artist: "Edward Sharpe & The Magnetic Zeros", album: "Up From Below", album_cover: "", moods: ["feliz", "enamorado", "libre"], moment_types: ["vacaciones", "evento"], genres: ["folk", "indie"] },
+  { id: "mx026", track_name: "Pink + White", artist: "Frank Ocean", album: "Blonde", album_cover: "", moods: ["relajado", "nostálgico", "enamorado"], moment_types: ["noche", "tranquilo"], genres: ["r&b"] },
+  { id: "mx027", track_name: "telepatía", artist: "Kali Uchis", album: "Sin Miedo", album_cover: "", moods: ["enamorado", "relajado"], moment_types: ["noche", "vacaciones"], genres: ["r&b", "pop"] },
+  { id: "mx028", track_name: "After the Storm", artist: "Kali Uchis", album: "Isolation", album_cover: "", moods: ["esperanzado", "relajado", "feliz"], moment_types: ["tranquilo", "vacaciones"], genres: ["r&b", "pop"] },
+  { id: "mx029", track_name: "Safaera", artist: "Bad Bunny", album: "YHLQMDLG", album_cover: "", moods: ["feliz", "motivado", "libre"], moment_types: ["fiesta"], genres: ["reggaeton"] },
+  { id: "mx030", track_name: "Ojitos Lindos", artist: "Bad Bunny & Bomba Estéreo", album: "Un Verano Sin Ti", album_cover: "", moods: ["enamorado", "relajado", "feliz"], moment_types: ["vacaciones", "noche"], genres: ["reggaeton", "pop"] },
+  { id: "mx031", track_name: "Ella Baila Sola", artist: "Eslabon Armado & Peso Pluma", album: "Desvelado", album_cover: "", moods: ["feliz", "motivado"], moment_types: ["fiesta"], genres: ["regional"] },
+  { id: "mx032", track_name: "PRC", artist: "Peso Pluma & Natanael Cano", album: "Génesis", album_cover: "", moods: ["motivado", "libre"], moment_types: ["fiesta", "noche"], genres: ["regional"] },
+  { id: "mx033", track_name: "Lady Mi Amor", artist: "Tornillo", album: "Lady Mi Amor", album_cover: "", moods: ["enamorado", "relajado"], moment_types: ["noche"], genres: ["rap", "regional"] },
+  { id: "mx034", track_name: "Amor Tumbado", artist: "Natanael Cano", album: "Todo Es Diferente", album_cover: "", moods: ["enamorado", "nostálgico"], moment_types: ["noche", "despedida"], genres: ["regional"] },
+  { id: "mx035", track_name: "300 Noches", artist: "Belinda & Natanael Cano", album: "300 Noches", album_cover: "", moods: ["enamorado", "nostálgico"], moment_types: ["noche"], genres: ["regional", "pop"] },
+  { id: "mx036", track_name: "Fin de Semana", artist: "Junior H & Oscar Maydon", album: "Fin de Semana", album_cover: "", moods: ["feliz", "motivado", "libre"], moment_types: ["fiesta", "noche"], genres: ["regional"] },
+  { id: "mx037", track_name: "TQM", artist: "Fuerza Regida", album: "Pa Las Baby's y Belikeada", album_cover: "", moods: ["motivado", "libre"], moment_types: ["fiesta"], genres: ["regional"] },
+  { id: "mx038", track_name: "Dákiti", artist: "Bad Bunny & Jhay Cortez", album: "El Último Tour del Mundo", album_cover: "", moods: ["enamorado", "nervioso", "relajado"], moment_types: ["noche", "fiesta"], genres: ["reggaeton"] },
+  { id: "mx039", track_name: "LALA", artist: "Myke Towers", album: "LALA", album_cover: "", moods: ["feliz", "motivado"], moment_types: ["fiesta"], genres: ["reggaeton"] },
+  { id: "mx040", track_name: "Classy 101", artist: "Feid & Young Miko", album: "Classy 101", album_cover: "", moods: ["motivado", "nervioso"], moment_types: ["fiesta", "noche"], genres: ["reggaeton", "rap"] },
+  { id: "mx041", track_name: "BZRP Music Sessions, Vol. 52", artist: "Bizarrap & Quevedo", album: "BZRP Music Sessions", album_cover: "", moods: ["feliz", "motivado", "libre"], moment_types: ["fiesta"], genres: ["pop", "electronic"] },
+  { id: "mx042", track_name: "Mamiii", artist: "Becky G & Karol G", album: "Mamiii", album_cover: "", moods: ["libre", "motivado"], moment_types: ["fiesta", "despedida"], genres: ["reggaeton", "pop"] },
+  { id: "mx043", track_name: "Despechá", artist: "Rosalía", album: "Despechá", album_cover: "", moods: ["libre", "feliz"], moment_types: ["fiesta", "vacaciones"], genres: ["pop"] },
+  { id: "mx044", track_name: "La Bachata", artist: "Manuel Turizo", album: "2000", album_cover: "", moods: ["enamorado", "nostálgico"], moment_types: ["noche", "fiesta"], genres: ["bachata", "pop"] },
+  { id: "mx045", track_name: "Propuesta Indecente", artist: "Romeo Santos", album: "Formula, Vol. 2", album_cover: "", moods: ["enamorado", "nervioso"], moment_types: ["noche", "fiesta"], genres: ["bachata"] },
+  { id: "mx046", track_name: "Bachata en Fukuoka", artist: "Juan Luis Guerra", album: "A Son de Guerra", album_cover: "", moods: ["feliz", "enamorado", "relajado"], moment_types: ["vacaciones", "fiesta"], genres: ["bachata"] },
+  { id: "mx047", track_name: "Suavemente", artist: "Elvis Crespo", album: "Suavemente", album_cover: "", moods: ["feliz", "motivado"], moment_types: ["fiesta"], genres: ["merengue"] },
+  { id: "mx048", track_name: "La Bilirrubina", artist: "Juan Luis Guerra 4.40", album: "Bachata Rosa", album_cover: "", moods: ["feliz", "enamorado"], moment_types: ["fiesta"], genres: ["merengue"] },
+  { id: "mx049", track_name: "Vivir Mi Vida", artist: "Marc Anthony", album: "3.0", album_cover: "", moods: ["feliz", "motivado", "libre"], moment_types: ["fiesta", "evento"], genres: ["salsa"] },
+  { id: "mx050", track_name: "Llorarás", artist: "Oscar D'León", album: "Con Bajo y Todo", album_cover: "", moods: ["libre", "nostálgico"], moment_types: ["fiesta", "despedida"], genres: ["salsa"] },
+  { id: "mx051", track_name: "Periódico de Ayer", artist: "Héctor Lavoe", album: "De Ti Depende", album_cover: "", moods: ["nostálgico", "triste"], moment_types: ["despedida", "fiesta"], genres: ["salsa"] },
+  { id: "mx052", track_name: "Rebelión", artist: "Joe Arroyo", album: "Rebelión", album_cover: "", moods: ["motivado", "libre"], moment_types: ["fiesta"], genres: ["salsa"] },
+  { id: "mx053", track_name: "Chan Chan", artist: "Buena Vista Social Club", album: "Buena Vista Social Club", album_cover: "", moods: ["nostálgico", "relajado"], moment_types: ["tranquilo", "vacaciones"], genres: ["latin"] },
+  { id: "mx054", track_name: "Eres para Mí", artist: "Julieta Venegas & Ana Tijoux", album: "Limón y Sal", album_cover: "", moods: ["enamorado", "feliz"], moment_types: ["fiesta", "noche"], genres: ["pop", "rap"] },
+  { id: "mx055", track_name: "A Dios Le Pido", artist: "Juanes", album: "Un Día Normal", album_cover: "", moods: ["esperanzado", "feliz"], moment_types: ["evento", "concierto"], genres: ["rock", "pop"] },
+  { id: "mx056", track_name: "Flaca", artist: "Andrés Calamaro", album: "Alta Suciedad", album_cover: "", moods: ["enamorado", "nostálgico"], moment_types: ["noche"], genres: ["rock"] },
+  { id: "mx057", track_name: "La Flaca", artist: "Jarabe de Palo", album: "La Flaca", album_cover: "", moods: ["enamorado", "feliz"], moment_types: ["vacaciones", "fiesta"], genres: ["rock", "latin"] },
+  { id: "mx058", track_name: "Ya No Sé Qué Hacer Conmigo", artist: "El Cuarteto de Nos", album: "Raro", album_cover: "", moods: ["nervioso", "reflexivo", "libre"], moment_types: ["concierto", "noche"], genres: ["rock", "latin"] },
+  { id: "mx059", track_name: "El Mató a un Policía Motorizado", artist: "El Mató a un Policía Motorizado", album: "La Dinastía Scorpio", album_cover: "", moods: ["nostálgico", "relajado", "reflexivo"], moment_types: ["concierto", "noche"], genres: ["indie", "rock", "latin"] },
+  { id: "mx060", track_name: "Moscow Mule", artist: "Bad Bunny", album: "Un Verano Sin Ti", album_cover: "", moods: ["feliz", "relajado", "libre"], moment_types: ["vacaciones", "fiesta"], genres: ["reggaeton", "latin"] },
+  { id: "mx061", track_name: "Argentina", artist: "Trueno, Nathy Peluso", album: "Argentina", album_cover: "", moods: ["motivado", "rapero", "libre"], moment_types: ["fiesta", "concierto"], genres: ["rap", "latin"] },
 ];
+
+const moodEnergy: Record<string, number> = {
+  triste: 3,
+  relajado: 4,
+  reflexivo: 4,
+  nostálgico: 4,
+  enamorado: 5,
+  esperanzado: 6,
+  feliz: 7,
+  libre: 7,
+  rapero: 8,
+  motivado: 8,
+  nervioso: 8,
+};
+
+const momentScenes: Record<string, string[]> = {
+  vacaciones: ["beach", "nature", "road"],
+  tranquilo: ["cafe", "indoor", "nature"],
+  noche: ["night", "city", "indoor"],
+  fiesta: ["party", "night", "city"],
+  concierto: ["concert", "night"],
+  despedida: ["sunset", "road", "indoor"],
+  evento: ["party", "city"],
+  inspiracion: ["cafe", "nature"],
+};
+
+const genreByArtistHints: Array<[string, string[]]> = [
+  ["bad bunny", ["reggaeton", "latin"]],
+  ["peso pluma", ["regional", "latin"]],
+  ["natanael", ["regional", "latin"]],
+  ["junior h", ["regional", "latin"]],
+  ["fuerza regida", ["regional", "latin"]],
+  ["romeo santos", ["bachata", "latin"]],
+  ["juan luis guerra", ["bachata", "merengue", "latin"]],
+  ["marc anthony", ["salsa", "latin"]],
+  ["lavoe", ["salsa", "latin"]],
+  ["zoé", ["rock", "indie", "latin"]],
+  ["caifanes", ["rock", "latin"]],
+  ["soda stereo", ["rock", "latin"]],
+  ["café tacvba", ["rock", "indie", "latin"]],
+  ["frank ocean", ["r&b"]],
+  ["sza", ["r&b"]],
+  ["kali uchis", ["r&b", "pop", "latin"]],
+  ["tyler", ["rap", "r&b"]],
+  ["drake", ["rap", "r&b"]],
+  ["kendrick", ["rap"]],
+  ["daft punk", ["electronic", "pop"]],
+  ["tame impala", ["indie", "rock"]],
+  ["arctic monkeys", ["rock", "indie"]],
+];
+
+function inferGenres(track: TrackData) {
+  if (track.genres?.length) return track.genres;
+  const artist = track.artist.toLowerCase();
+  const hit = genreByArtistHints.find(([needle]) => artist.includes(needle));
+  if (hit) return hit[1];
+  if (track.moods.includes("rapero")) return ["rap"];
+  if (track.moment_types?.includes("concierto")) return ["rock", "pop"];
+  if (track.moment_types?.includes("fiesta")) return ["pop", "dance"];
+  return ["pop"];
+}
+
+function inferEnergy(track: TrackData) {
+  if (track.energy) return track.energy;
+  const values = track.moods.map((mood) => moodEnergy[mood]).filter(Boolean);
+  const average = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 5;
+  return Math.max(1, Math.min(10, Math.round(average)));
+}
+
+function inferScenes(track: TrackData) {
+  if (track.visualScenes?.length) return track.visualScenes;
+  const scenes = new Set<string>();
+  track.moment_types?.forEach((moment) => momentScenes[moment]?.forEach((scene) => scenes.add(scene)));
+  if (!scenes.size) scenes.add(track.moods.includes("relajado") ? "cafe" : "city");
+  return Array.from(scenes).slice(0, 4);
+}
+
+function inferColorVibes(track: TrackData) {
+  if (track.colorVibes?.length) return track.colorVibes;
+  const vibes = new Set<string>();
+  if (track.moods.some((mood) => ["feliz", "motivado", "libre"].includes(mood))) vibes.add("vibrant");
+  if (track.moods.some((mood) => ["nostálgico", "enamorado", "esperanzado"].includes(mood))) vibes.add("golden");
+  if (track.moods.some((mood) => ["triste", "reflexivo", "relajado"].includes(mood))) vibes.add("muted");
+  if (track.moment_types?.includes("noche")) vibes.add("cool");
+  if (!vibes.size) vibes.add("warm");
+  return Array.from(vibes);
+}
+
+export const TRACK_CATALOG: TrackData[] = RAW_TRACK_CATALOG.map((track) => ({
+  ...track,
+  genres: inferGenres(track),
+  energy: inferEnergy(track),
+  visualScenes: inferScenes(track),
+  colorVibes: inferColorVibes(track),
+}));
 
 // Artistas únicos para autocompletar
 export const ARTISTS = Array.from(new Set(TRACK_CATALOG.map(t => t.artist))).sort();

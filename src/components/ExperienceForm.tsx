@@ -14,6 +14,7 @@ import { ArtistSearch } from "./memoryplaylist/ArtistSearch";
 import { FormSection } from "./memoryplaylist/FormSection";
 import { GenerateButton } from "./memoryplaylist/GenerateButton";
 import { PlaylistLoader } from "./memoryplaylist/PlaylistLoader";
+import { DiscoverySlider } from "./memoryplaylist/DiscoverySlider";
 
 const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 const DEFAULT_DISCOVERY_PERCENTAGE = 15;
@@ -165,11 +166,12 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
   const [photoError, setPhotoError] = useState<PhotoAnalysisErrorCode | null>(null);
   const [photoAnalysisSignature, setPhotoAnalysisSignature] = useState("");
   const [backendReady] = useState<boolean>(isPhotoAnalysisConfigured());
+  const [newMusicPercentage, setNewMusicPercentage] = useState([DEFAULT_DISCOVERY_PERCENTAGE]);
 
   const getAnalysisSignature = (photo = photoPreview) => JSON.stringify({
     photo: photo ? photo.slice(0, 80) : "",
     tags: selectedTags.map((t) => `${t.type}:${t.value}`).sort(),
-    discovery: DEFAULT_DISCOVERY_PERCENTAGE,
+    discovery: newMusicPercentage[0],
   });
 
   const runPhotoAnalysis = async (compressedBase64: string, signature = getAnalysisSignature()) => {
@@ -182,7 +184,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         selectedMood: "",
         selectedMomentType: "",
         selectedTags,
-        newMusicPercentage: DEFAULT_DISCOVERY_PERCENTAGE,
+        newMusicPercentage: newMusicPercentage[0],
       });
 
       if (result.data?.photoAnalysis) {
@@ -275,7 +277,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         detectedMood,
         detectedMoment,
         selectedTags,
-        DEFAULT_DISCOVERY_PERCENTAGE,
+        newMusicPercentage[0],
         currentPhotoAnalysis,
         musicProfile
       );
@@ -307,7 +309,8 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         moment_type: detectedMoment,
         tags: selectedTags,
         photo_analysis: currentPhotoAnalysis,
-        new_music_percentage: DEFAULT_DISCOVERY_PERCENTAGE,
+        new_music_percentage: newMusicPercentage[0],
+        photo_preview: photoPreview,
         created_at: new Date().toISOString(),
       };
 
@@ -323,9 +326,10 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         name: playlistName,
         emotion: detectedMood,
         moment_type: detectedMoment,
-        new_music_percentage: DEFAULT_DISCOVERY_PERCENTAGE,
+        new_music_percentage: newMusicPercentage[0],
         tags: selectedTags,
         photo_analysis: currentPhotoAnalysis,
+        photo_preview: photoPreview,
         created_at: new Date().toISOString(),
       };
 
@@ -357,6 +361,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
       setPhotoMusicProfile(null);
       setPhotoError(null);
       setPhotoAnalysisSignature("");
+      setNewMusicPercentage([DEFAULT_DISCOVERY_PERCENTAGE]);
     } catch (error: unknown) {
       console.error("Error:", error);
       toast.error(error instanceof Error ? error.message : "Error al generar playlist");
@@ -396,6 +401,10 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
           onAddTag={(tag) => setSelectedTags([...selectedTags, tag])}
           onRemoveTag={(value) => setSelectedTags(selectedTags.filter((t) => t.value !== value))}
         />
+      </FormSection>
+
+      <FormSection title="Nivel de descubrimiento" subtitle="Ajusta cuánto quieres salirte de lo obvio sin perder la vibra de la foto.">
+        <DiscoverySlider value={newMusicPercentage} onChange={setNewMusicPercentage} />
       </FormSection>
 
       <div className="pt-4">
