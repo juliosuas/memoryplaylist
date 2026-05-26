@@ -1,5 +1,5 @@
 /**
- * API Helper Layer for Fryda
+ * API Helper Layer for VibePlaylist
  * Typed functions for all Supabase database operations.
  * Components should use these instead of raw supabase calls.
  */

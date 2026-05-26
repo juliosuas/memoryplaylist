@@ -1,5 +1,5 @@
 /**
- * Centralized Error Handler for Fryda
+ * Centralized Error Handler for VibePlaylist
  * Bilingual error messages (ES/EN) with toast integration.
  */
 import { toast } from "sonner";
@@ -185,7 +185,7 @@ export function classifyError(error: unknown): string {
  */
 export function handleError(error: unknown, fallbackCode?: string): string {
   const code = fallbackCode || classifyError(error);
-  console.error(`[Fryda Error] ${code}:`, error);
+  console.error(`[VibePlaylist Error] ${code}:`, error);
   showError(code);
   return code;
 }

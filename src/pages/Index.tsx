@@ -45,7 +45,7 @@ const Index = () => {
               VibePlaylist
             </h2>
             <p className="text-muted-foreground text-lg max-w-md mx-auto">
-              Sube una foto y Fryda arma una playlist simple para ese momento.
+              Sube una foto y VibePlaylist arma una playlist simple para ese momento.
             </p>
           </div>
         )}

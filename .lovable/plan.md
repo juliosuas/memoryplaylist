@@ -7,7 +7,7 @@ Prepare the app for the Lovable contest under the public name **VibePlaylist** w
 ## Public positioning
 
 - First viewport should say **VibePlaylist** clearly.
-- Fryda remains in supporting copy as the guide that reads the memory and suggests music.
+- VibePlaylist remains the visible brand throughout the simple flow.
 - Metadata, social previews, README, and submission notes should use **VibePlaylist**.
 - Copy must stay honest: the app generates a local AI-guided tracklist and opens music-service searches/actions. It does not write real playlists into Spotify or Apple Music accounts.
 

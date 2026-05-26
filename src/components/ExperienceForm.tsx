@@ -245,7 +245,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!photoPreview) {
-      toast.error("Sube una foto para que Fryda detecte el mood y arme la playlist.");
+      toast.error("Sube una foto para que VibePlaylist detecte el mood y arme la playlist.");
       return;
     }
 
@@ -372,7 +372,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      <FormSection title="Sube una foto" subtitle="Fryda detecta el mood, el momento y la energía automáticamente.">
+      <FormSection title="Sube una foto" subtitle="VibePlaylist detecta el mood, el momento y la energía automáticamente.">
         <PhotoUpload
           photoPreview={photoPreview}
           photoInsight={photoInsight}
@@ -390,7 +390,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         </div>
       )}
 
-      <FormSection title="Opcional: afina con tu gusto" subtitle="Si agregas artistas o canciones, Fryda se pega más a tu sonido. Si no, la foto manda.">
+      <FormSection title="Opcional: afina con tu gusto" subtitle="Si agregas artistas o canciones, VibePlaylist se pega más a tu sonido. Si no, la foto manda.">
         <ArtistSearch
           selectedTags={selectedTags}
           onAddTag={(tag) => setSelectedTags([...selectedTags, tag])}
