@@ -1,20 +1,20 @@
-# VibePlaylist contest readiness plan
+# Memory Playlist contest readiness plan
 
 ## Goal
 
-Prepare the app for the Lovable contest under the public name **VibePlaylist** while keeping the flow intentionally simple: photo upload, optional music taste, generated tracklist, music-service open/search actions, and basic sharing.
+Prepare the app for the Lovable contest under the public name **Memory Playlist** while keeping the flow intentionally simple: photo upload, optional music taste, generated tracklist, music-service open/search actions, and basic sharing.
 
 ## Public positioning
 
-- First viewport should say **VibePlaylist** clearly.
-- VibePlaylist remains the visible brand throughout the simple flow.
-- Metadata, social previews, README, and submission notes should use **VibePlaylist**.
+- First viewport should say **Memory Playlist** clearly.
+- Memory Playlist remains the visible brand throughout the simple flow.
+- Metadata, social previews, README, and submission notes should use **Memory Playlist**.
 - Copy must stay honest: the app generates a local AI-guided tracklist and opens music-service searches/actions. It does not write real playlists into Spotify or Apple Music accounts.
 
 ## Current release gates
 
-- [x] First viewport names VibePlaylist.
-- [x] `index.html` title, description, OG, and Twitter metadata name VibePlaylist.
+- [x] First viewport names Memory Playlist.
+- [x] `index.html` title, description, OG, and Twitter metadata name Memory Playlist.
 - [x] User-facing service actions avoid implying Spotify/Apple playlist creation.
 - [x] README contains contest evidence placeholders.
 - [x] README explicitly discloses Spotify/Apple are search/open actions.

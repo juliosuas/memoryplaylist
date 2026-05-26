@@ -333,7 +333,7 @@ async function singleAttempt(
 
 /**
  * Calls analyze-photo once with a short timeout, then falls back locally.
- * VibePlaylist must never make the user wait on a paused Supabase project or missing
+ * Memory Playlist must never make the user wait on a paused Supabase project or missing
  * Lovable AI Gateway key just to generate a playlist.
  */
 export async function analyzePhotoWithRetry(

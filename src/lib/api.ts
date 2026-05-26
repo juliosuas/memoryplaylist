@@ -1,5 +1,5 @@
 /**
- * API Helper Layer for VibePlaylist
+ * API Helper Layer for Memory Playlist
  * Typed functions for all Supabase database operations.
  * Components should use these instead of raw supabase calls.
  */

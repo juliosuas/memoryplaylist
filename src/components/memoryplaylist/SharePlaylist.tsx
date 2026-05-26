@@ -58,7 +58,7 @@ export const SharePlaylist = ({ playlist, tracks, config }: SharePlaylistProps) 
     })) satisfies StoredTrack[],
   });
   const portableShareUrl = `${window.location.origin}${window.location.pathname}#share=${sharePayload}`;
-  const shareText = `Mi playlist ${emotionLabel} en VibePlaylist:\n${tracks
+  const shareText = `Mi playlist ${emotionLabel} en Memory Playlist:\n${tracks
     .slice(0, 10)
     .map((track, index) => `${index + 1}. ${track.track_name} - ${track.artist}`)
     .join("\n")}\n\nCrea la tuya: ${portableShareUrl}`;
@@ -78,7 +78,7 @@ export const SharePlaylist = ({ playlist, tracks, config }: SharePlaylistProps) 
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Mi playlist ${emotionLabel} en VibePlaylist`,
+          title: `Mi playlist ${emotionLabel} en Memory Playlist`,
           text: shareText,
           url: portableShareUrl,
         });
@@ -105,7 +105,7 @@ export const SharePlaylist = ({ playlist, tracks, config }: SharePlaylistProps) 
         logging: false,
       });
       const link = document.createElement("a");
-      link.download = `vibeplaylist-${playlistEmotion}.png`;
+      link.download = `memoryplaylist-${playlistEmotion}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
       toast.success("¡Imagen descargada!");
@@ -117,14 +117,14 @@ export const SharePlaylist = ({ playlist, tracks, config }: SharePlaylistProps) 
 
   const handleShareTwitter = () => {
     const text = encodeURIComponent(
-      `🎵 Mi playlist "${emotionLabel}" en VibePlaylist: ${tracks.slice(0, 2).map((t) => `${t.track_name} - ${t.artist}`).join(", ")}... #VibePlaylist #Music`
+      `🎵 Mi playlist "${emotionLabel}" en Memory Playlist: ${tracks.slice(0, 2).map((t) => `${t.track_name} - ${t.artist}`).join(", ")}... #MemoryPlaylist #Music`
     );
     window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(portableShareUrl)}`, "_blank");
   };
 
   const handleShareWhatsApp = () => {
     const text = encodeURIComponent(
-      `🎵 Mira mi playlist "${emotionLabel}" generada con IA en VibePlaylist!\n${tracks.slice(0, 3).map((t) => `• ${t.track_name} - ${t.artist}`).join("\n")}\n\nCrea la tuya: ${portableShareUrl}`
+      `🎵 Mira mi playlist "${emotionLabel}" generada con IA en Memory Playlist!\n${tracks.slice(0, 3).map((t) => `• ${t.track_name} - ${t.artist}`).join("\n")}\n\nCrea la tuya: ${portableShareUrl}`
     );
     window.open(`https://wa.me/?text=${text}`, "_blank");
   };
@@ -188,7 +188,7 @@ export const SharePlaylist = ({ playlist, tracks, config }: SharePlaylistProps) 
                   <div className="w-5 h-5 rounded-md bg-white/20 flex items-center justify-center">
                     <span className="text-[10px]">♥</span>
                   </div>
-                  <span className="text-white/80 text-xs font-medium">VibePlaylist · Every memory has its song</span>
+                  <span className="text-white/80 text-xs font-medium">Memory Playlist · Turn a photo into songs for the moment</span>
                 </div>
               </div>
 

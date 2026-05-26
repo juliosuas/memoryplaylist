@@ -33,17 +33,17 @@ interface StorageMetrics {
 }
 
 const calculateStorageMetrics = (): StorageMetrics => {
-  const experiences = JSON.parse(localStorage.getItem("vibeplaylist_experiences") || "[]");
-  const playlists = JSON.parse(localStorage.getItem("vibeplaylist_playlists") || "[]");
-  const tracks = JSON.parse(localStorage.getItem("vibeplaylist_tracks") || "[]");
-  const preferences = JSON.parse(localStorage.getItem("vibeplaylist_preferences") || "[]");
+  const experiences = JSON.parse(localStorage.getItem("memoryplaylist_experiences") || "[]");
+  const playlists = JSON.parse(localStorage.getItem("memoryplaylist_playlists") || "[]");
+  const tracks = JSON.parse(localStorage.getItem("memoryplaylist_tracks") || "[]");
+  const preferences = JSON.parse(localStorage.getItem("memoryplaylist_preferences") || "[]");
 
   // Calcular tamaño aproximado en KB
   const totalBytes = 
-    (localStorage.getItem("vibeplaylist_experiences")?.length || 0) +
-    (localStorage.getItem("vibeplaylist_playlists")?.length || 0) +
-    (localStorage.getItem("vibeplaylist_tracks")?.length || 0) +
-    (localStorage.getItem("vibeplaylist_preferences")?.length || 0);
+    (localStorage.getItem("memoryplaylist_experiences")?.length || 0) +
+    (localStorage.getItem("memoryplaylist_playlists")?.length || 0) +
+    (localStorage.getItem("memoryplaylist_tracks")?.length || 0) +
+    (localStorage.getItem("memoryplaylist_preferences")?.length || 0);
 
   const totalKB = totalBytes / 1024;
   const totalSize = totalKB > 1024 
@@ -83,10 +83,10 @@ export const SettingsDialog = ({ triggerClassName, onOpenPlaylist }: SettingsDia
   }, [open]);
 
   const handleClearStorage = () => {
-    localStorage.removeItem("vibeplaylist_experiences");
-    localStorage.removeItem("vibeplaylist_playlists");
-    localStorage.removeItem("vibeplaylist_tracks");
-    localStorage.removeItem("vibeplaylist_preferences");
+    localStorage.removeItem("memoryplaylist_experiences");
+    localStorage.removeItem("memoryplaylist_playlists");
+    localStorage.removeItem("memoryplaylist_tracks");
+    localStorage.removeItem("memoryplaylist_preferences");
     
     setMetrics(calculateStorageMetrics());
     setRecentPlaylists([]);

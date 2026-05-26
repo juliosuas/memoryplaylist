@@ -37,10 +37,10 @@ declare global {
 }
 
 const STORAGE_KEYS = {
-  experiences: "vibeplaylist_experiences",
-  playlists: "vibeplaylist_playlists",
-  tracks: "vibeplaylist_tracks",
-  preferences: "vibeplaylist_preferences",
+  experiences: "memoryplaylist_experiences",
+  playlists: "memoryplaylist_playlists",
+  tracks: "memoryplaylist_tracks",
+  preferences: "memoryplaylist_preferences",
 };
 
 function readArray<T = unknown>(key: string): T[] {
@@ -50,7 +50,7 @@ function readArray<T = unknown>(key: string): T[] {
     const parsed: unknown = JSON.parse(raw);
     return Array.isArray(parsed) ? (parsed as T[]) : [];
   } catch (error) {
-    console.warn(`VibePlaylist could not read ${key}; ignoring corrupted local data.`, error);
+    console.warn(`Memory Playlist could not read ${key}; ignoring corrupted local data.`, error);
     return [];
   }
 }
@@ -60,12 +60,12 @@ function writeArray<T>(key: string, items: T[], trimTo: number): boolean {
     localStorage.setItem(key, JSON.stringify(items));
     return true;
   } catch (firstError) {
-    console.warn(`VibePlaylist could not write ${key}; trying trimmed fallback.`, firstError);
+    console.warn(`Memory Playlist could not write ${key}; trying trimmed fallback.`, firstError);
     try {
       localStorage.setItem(key, JSON.stringify(items.slice(-trimTo)));
       return true;
     } catch (secondError) {
-      console.warn(`VibePlaylist storage unavailable for ${key}; continuing in memory.`, secondError);
+      console.warn(`Memory Playlist storage unavailable for ${key}; continuing in memory.`, secondError);
       return false;
     }
   }
@@ -152,7 +152,7 @@ export function importSharedPlaylistFromUrl(hash: string): StoredPlaylistBundle 
     saveGeneratedPlaylist(bundle);
     return bundle;
   } catch (error) {
-    console.warn("VibePlaylist could not import shared playlist payload.", error);
+    console.warn("Memory Playlist could not import shared playlist payload.", error);
     return null;
   }
 }

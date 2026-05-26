@@ -1,5 +1,5 @@
 /**
- * Centralized Error Handler for VibePlaylist
+ * Centralized Error Handler for Memory Playlist
  * Bilingual error messages (ES/EN) with toast integration.
  */
 import { toast } from "sonner";
@@ -185,7 +185,7 @@ export function classifyError(error: unknown): string {
  */
 export function handleError(error: unknown, fallbackCode?: string): string {
   const code = fallbackCode || classifyError(error);
-  console.error(`[VibePlaylist Error] ${code}:`, error);
+  console.error(`[Memory Playlist Error] ${code}:`, error);
   showError(code);
   return code;
 }

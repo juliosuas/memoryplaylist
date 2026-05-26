@@ -1,15 +1,15 @@
-# VibePlaylist
+# Memory Playlist
 
-**Every memory has its song.**
+**Turn a photo into songs for the moment.**
 
-VibePlaylist turns a photo into an AI-guided music recommendation list: it reads the mood, scene, and energy, then suggests tracks that fit the moment.
+Memory Playlist turns a photo into an AI-guided music recommendation list: it reads the mood, scene, and energy, then suggests tracks that fit the moment.
 
-Important product truth: VibePlaylist does not create real playlists inside Spotify or Apple Music. It generates a local tracklist and opens search/listening actions in YouTube, Spotify, and Apple Music so users can review and save songs in the service they prefer.
+Important product truth: Memory Playlist does not create real playlists inside Spotify or Apple Music. It generates a local tracklist and opens search/listening actions in YouTube, Spotify, and Apple Music so users can review and save songs in the service they prefer.
 
 ## Lovable Contest Positioning
 
-- Public name: **VibePlaylist**
-- Personality: simple VibePlaylist flow, photo-first and direct
+- Public name: **Memory Playlist**
+- Personality: simple Memory Playlist flow, photo-first and direct
 - Demo promise: upload a memory photo, get a scored tracklist, share the result, and open honest music-service searches
 - Non-goal for contest build: native Spotify/Apple playlist creation or account-connected music writes
 
@@ -105,7 +105,7 @@ Copy `.env.example` for local development. In Lovable, set the `VITE_` variables
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Lovable/Vite frontend | Yes for live photo AI | Supabase anon/public key |
 | `LOVABLE_API_KEY` | Supabase Edge Function secret | Optional fallback-safe | AI Gateway key used server-side only |
 
-If Supabase Edge Functions or `LOVABLE_API_KEY` are unavailable, VibePlaylist intentionally fails open: the frontend still creates a local generated tracklist and opens it in YouTube, Spotify, or Apple Music search.
+If Supabase Edge Functions or `LOVABLE_API_KEY` are unavailable, Memory Playlist intentionally fails open: the frontend still creates a local generated tracklist and opens it in YouTube, Spotify, or Apple Music search.
 
 ## Contest Evidence Checklist
 
@@ -124,8 +124,8 @@ Use this section as the submission-facing evidence log. Replace placeholders wit
 
 ## Release Gates
 
-- First viewport shows **VibePlaylist** as the public name.
-- Browser title and social metadata use **VibePlaylist**.
+- First viewport shows **Memory Playlist** as the public name.
+- Browser title and social metadata use **Memory Playlist**.
 - Product copy does not claim real Spotify or Apple Music playlist creation.
 - YouTube/Spotify/Apple actions are labeled as open/search actions.
 - README evidence placeholders are filled before contest submission.
@@ -139,7 +139,7 @@ Use this section as the submission-facing evidence log. Replace placeholders wit
 ```
 src/
 ├── components/
-│   ├── fryda/           # Legacy music-guide component folder
+│   ├── memoryplaylist/           # Music-guide component folder
 │   │   ├── ArtistSearch.tsx
 │   │   ├── DiscoverySlider.tsx
 │   │   ├── FormSection.tsx
