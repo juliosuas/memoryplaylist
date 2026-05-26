@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { generateSmartPlaylist, getPhotoInsight, PhotoAnalysis, MusicProfile } from "@/lib/playlistGenerator";
 import { saveGeneratedPlaylist } from "@/lib/localPlaylistStore";
@@ -15,6 +15,8 @@ import { FormSection } from "./memoryplaylist/FormSection";
 import { GenerateButton } from "./memoryplaylist/GenerateButton";
 import { PlaylistLoader } from "./memoryplaylist/PlaylistLoader";
 import { DiscoverySlider } from "./memoryplaylist/DiscoverySlider";
+import { PaywallCard } from "./memoryplaylist/PaywallCard";
+import { getPlaylistAccessState, syncPaidAccessFromUrl, type PlaylistAccessState } from "@/lib/playlistAccess";
 
 const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 const DEFAULT_DISCOVERY_PERCENTAGE = 15;
@@ -167,6 +169,16 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
   const [photoAnalysisSignature, setPhotoAnalysisSignature] = useState("");
   const [backendReady] = useState<boolean>(isPhotoAnalysisConfigured());
   const [newMusicPercentage, setNewMusicPercentage] = useState([DEFAULT_DISCOVERY_PERCENTAGE]);
+  const [access, setAccess] = useState<PlaylistAccessState>(() => getPlaylistAccessState());
+
+  useEffect(() => {
+    if (syncPaidAccessFromUrl()) {
+      toast.success("Acceso desbloqueado. Ya puedes seguir creando playlists.");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+
+    setAccess(getPlaylistAccessState());
+  }, []);
 
   const getAnalysisSignature = (photo = photoPreview) => JSON.stringify({
     photo: photo ? photo.slice(0, 80) : "",
@@ -246,6 +258,14 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const currentAccess = getPlaylistAccessState();
+    setAccess(currentAccess);
+
+    if (currentAccess.isLimitReached) {
+      toast.error("Ya usaste tus 3 playlists gratis. Desbloquea para seguir creando.");
+      return;
+    }
+
     if (!photoPreview) {
       toast.error("Sube una foto para que Memory Playlist detecte el mood y arme la playlist.");
       return;
@@ -350,6 +370,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
 
       const insight = currentPhotoAnalysis ? getPhotoInsight(currentPhotoAnalysis) : null;
       toast.success(insight ? `¡Playlist creada! ${insight}` : "¡Playlist generada con éxito!");
+      setAccess(getPlaylistAccessState());
       setLoading(false);
       onPlaylistGenerated(playlistId);
 
@@ -407,8 +428,18 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         <DiscoverySlider value={newMusicPercentage} onChange={setNewMusicPercentage} />
       </FormSection>
 
+      {access.isLimitReached ? (
+        <PaywallCard access={access} />
+      ) : (
+        <p className="text-center text-xs text-muted-foreground">
+          {access.remainingFree === 1
+            ? "Te queda 1 playlist gratis."
+            : `Te quedan ${access.remainingFree} playlists gratis.`}
+        </p>
+      )}
+
       <div className="pt-4">
-        <GenerateButton isLoading={loading} disabled={!photoPreview || analyzingPhoto} />
+        <GenerateButton isLoading={loading} disabled={!photoPreview || analyzingPhoto || access.isLimitReached} />
       </div>
     </form>
   );

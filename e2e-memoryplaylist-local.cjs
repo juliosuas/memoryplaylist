@@ -103,7 +103,24 @@ const path = require('path');
   await mobilePage.screenshot({ path: path.join(outDir, '05-mobile-shared-result.png'), fullPage: true });
   await mobileContext.close();
 
-  console.log(JSON.stringify({ ok: true, youtubeUrl: ytUrl, spotifyUrl: spUrl, appleUrl, sharedUrlOk: true, photoPreviewStored: true, screenshots: ['test-artifacts/01-home.png','test-artifacts/02-form-filled.png','test-artifacts/03-playlist-result.png','test-artifacts/04-shared-link-result.png','test-artifacts/05-mobile-shared-result.png'], console: events.console.slice(0, 10) }, null, 2));
+  const paywallContext = await browser.newContext();
+  const paywallPage = await paywallContext.newPage();
+  await paywallPage.goto(baseUrl, { waitUntil: 'networkidle', timeout: 30000 });
+  await paywallPage.evaluate(() => {
+    localStorage.setItem('memoryplaylist_playlists', JSON.stringify([
+      { id: 'free-1', created_at: '2026-05-26T00:00:00.000Z' },
+      { id: 'free-2', created_at: '2026-05-26T00:01:00.000Z' },
+      { id: 'free-3', created_at: '2026-05-26T00:02:00.000Z' },
+    ]));
+  });
+  await paywallPage.reload({ waitUntil: 'networkidle' });
+  await paywallPage.getByText(/Ya usaste tus 3 playlists gratis/i).waitFor({ timeout: 5000 });
+  const generateDisabled = await paywallPage.getByRole('button', { name: /Crear playlist/i }).isDisabled();
+  if (!generateDisabled) throw new Error('Free limit paywall did not disable playlist generation after 3 playlists');
+  await paywallPage.screenshot({ path: path.join(outDir, '06-paywall.png'), fullPage: true });
+  await paywallContext.close();
+
+  console.log(JSON.stringify({ ok: true, youtubeUrl: ytUrl, spotifyUrl: spUrl, appleUrl, sharedUrlOk: true, photoPreviewStored: true, freeLimitPaywall: true, screenshots: ['test-artifacts/01-home.png','test-artifacts/02-form-filled.png','test-artifacts/03-playlist-result.png','test-artifacts/04-shared-link-result.png','test-artifacts/05-mobile-shared-result.png','test-artifacts/06-paywall.png'], console: events.console.slice(0, 10) }, null, 2));
   await browser.close();
 })().catch(async (err) => {
   console.error(err);
