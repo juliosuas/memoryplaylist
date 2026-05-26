@@ -118,6 +118,7 @@ Use this section as the submission-facing evidence log. Replace placeholders wit
 - Demo video/GIF: `TODO`
 - Final build command: `npm run build` — PASS on 2026-05-26
 - Final lint command: `npm run lint` — PASS on 2026-05-26 with 7 existing shadcn fast-refresh warnings
+- Final local e2e command: `npm run test:e2e:local` — PASS on 2026-05-26; YouTube, Spotify, share restore, and console checks passed
 - Supabase Edge Functions configured in production: `Not confirmed before Lovable publish; app has local fallback tracklist generation`
 - Known limitation disclosed: Spotify and Apple actions are searches/open actions, not account-connected playlist creation
 
@@ -130,6 +131,7 @@ Use this section as the submission-facing evidence log. Replace placeholders wit
 - README evidence placeholders are filled before contest submission.
 - `npm run lint` passes or every warning/error is documented. Current result: PASS with 7 existing shadcn fast-refresh warnings.
 - `npm run build` passes. Current result: PASS.
+- `npm run test:e2e:local` passes against Vite preview. Current result: PASS.
 - No Supabase function, package, or local playlist store changes are required for contest copy readiness.
 
 ## 📁 Project Structure

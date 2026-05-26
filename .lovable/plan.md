@@ -31,6 +31,7 @@ Prepare the app for the Lovable contest under the public name **VibePlaylist** w
 - Demo video/GIF: `TODO`
 - Final lint result: `npm run lint` PASS on 2026-05-26; 7 existing shadcn fast-refresh warnings
 - Final build result: `npm run build` PASS on 2026-05-26
+- Final local e2e result: `npm run test:e2e:local` PASS on 2026-05-26; YouTube, Spotify, share restore, and console checks passed
 - Supabase Edge Functions production status: `Not confirmed before Lovable publish; app has local fallback tracklist generation`
 
 ## Scope guard
