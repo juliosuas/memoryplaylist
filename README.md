@@ -111,14 +111,14 @@ If Supabase Edge Functions or `LOVABLE_API_KEY` are unavailable, VibePlaylist in
 
 Use this section as the submission-facing evidence log. Replace placeholders with the final URLs/screenshots before submitting.
 
-- Lovable project URL: `TODO`
-- Public demo URL: `TODO`
+- Lovable project URL: `https://lovable.dev/projects/7ed0e517-fcb5-47f2-b33f-a3016ba3167b`
+- Public demo URL: `Pending Lovable publish`
 - Desktop screenshot: `TODO`
 - Mobile screenshot: `TODO`
 - Demo video/GIF: `TODO`
 - Final build command: `npm run build` — PASS on 2026-05-26
 - Final lint command: `npm run lint` — PASS on 2026-05-26 with 7 existing shadcn fast-refresh warnings
-- Supabase Edge Functions configured in production: `TODO: yes/no`
+- Supabase Edge Functions configured in production: `Not confirmed before Lovable publish; app has local fallback tracklist generation`
 - Known limitation disclosed: Spotify and Apple actions are searches/open actions, not account-connected playlist creation
 
 ## Release Gates

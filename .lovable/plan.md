@@ -24,14 +24,14 @@ Prepare the app for the Lovable contest under the public name **VibePlaylist** w
 
 ## Submission evidence placeholders
 
-- Lovable project URL: `TODO`
-- Public demo URL: `TODO`
+- Lovable project URL: `https://lovable.dev/projects/7ed0e517-fcb5-47f2-b33f-a3016ba3167b`
+- Public demo URL: `Pending Lovable publish`
 - Desktop screenshot: `TODO`
 - Mobile screenshot: `TODO`
 - Demo video/GIF: `TODO`
 - Final lint result: `npm run lint` PASS on 2026-05-26; 7 existing shadcn fast-refresh warnings
 - Final build result: `npm run build` PASS on 2026-05-26
-- Supabase Edge Functions production status: `TODO`
+- Supabase Edge Functions production status: `Not confirmed before Lovable publish; app has local fallback tracklist generation`
 
 ## Scope guard
 
