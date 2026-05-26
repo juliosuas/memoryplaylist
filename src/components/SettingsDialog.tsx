@@ -33,17 +33,17 @@ interface StorageMetrics {
 }
 
 const calculateStorageMetrics = (): StorageMetrics => {
-  const experiences = JSON.parse(localStorage.getItem("fryda_experiences") || "[]");
-  const playlists = JSON.parse(localStorage.getItem("fryda_playlists") || "[]");
-  const tracks = JSON.parse(localStorage.getItem("fryda_tracks") || "[]");
-  const preferences = JSON.parse(localStorage.getItem("fryda_preferences") || "[]");
+  const experiences = JSON.parse(localStorage.getItem("memoryplaylist_experiences") || "[]");
+  const playlists = JSON.parse(localStorage.getItem("memoryplaylist_playlists") || "[]");
+  const tracks = JSON.parse(localStorage.getItem("memoryplaylist_tracks") || "[]");
+  const preferences = JSON.parse(localStorage.getItem("memoryplaylist_preferences") || "[]");
 
   // Calcular tamaño aproximado en KB
   const totalBytes = 
-    (localStorage.getItem("fryda_experiences")?.length || 0) +
-    (localStorage.getItem("fryda_playlists")?.length || 0) +
-    (localStorage.getItem("fryda_tracks")?.length || 0) +
-    (localStorage.getItem("fryda_preferences")?.length || 0);
+    (localStorage.getItem("memoryplaylist_experiences")?.length || 0) +
+    (localStorage.getItem("memoryplaylist_playlists")?.length || 0) +
+    (localStorage.getItem("memoryplaylist_tracks")?.length || 0) +
+    (localStorage.getItem("memoryplaylist_preferences")?.length || 0);
 
   const totalKB = totalBytes / 1024;
   const totalSize = totalKB > 1024 
@@ -83,10 +83,10 @@ export const SettingsDialog = ({ triggerClassName, onOpenPlaylist }: SettingsDia
   }, [open]);
 
   const handleClearStorage = () => {
-    localStorage.removeItem("fryda_experiences");
-    localStorage.removeItem("fryda_playlists");
-    localStorage.removeItem("fryda_tracks");
-    localStorage.removeItem("fryda_preferences");
+    localStorage.removeItem("memoryplaylist_experiences");
+    localStorage.removeItem("memoryplaylist_playlists");
+    localStorage.removeItem("memoryplaylist_tracks");
+    localStorage.removeItem("memoryplaylist_preferences");
     
     setMetrics(calculateStorageMetrics());
     setRecentPlaylists([]);

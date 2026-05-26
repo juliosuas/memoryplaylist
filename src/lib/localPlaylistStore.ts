@@ -32,7 +32,7 @@ export interface StoredPlaylistBundle {
 
 declare global {
   interface Window {
-    __frydaLatestPlaylist?: StoredPlaylistBundle;
+    __memoryplaylistLatestPlaylist?: StoredPlaylistBundle;
   }
 }
 
@@ -43,7 +43,7 @@ function readArray<T = unknown>(key: string): T[] {
     const parsed: unknown = JSON.parse(raw);
     return Array.isArray(parsed) ? (parsed as T[]) : [];
   } catch (error) {
-    console.warn(`Fryda could not read ${key}; ignoring corrupted local data.`, error);
+    console.warn(`Memory Playlist could not read ${key}; ignoring corrupted local data.`, error);
     return [];
   }
 }
@@ -53,12 +53,12 @@ function writeArray<T>(key: string, items: T[], trimTo: number): boolean {
     localStorage.setItem(key, JSON.stringify(items));
     return true;
   } catch (firstError) {
-    console.warn(`Fryda could not write ${key}; trying trimmed fallback.`, firstError);
+    console.warn(`Memory Playlist could not write ${key}; trying trimmed fallback.`, firstError);
     try {
       localStorage.setItem(key, JSON.stringify(items.slice(-trimTo)));
       return true;
     } catch (secondError) {
-      console.warn(`Fryda storage unavailable for ${key}; continuing in memory.`, secondError);
+      console.warn(`Memory Playlist storage unavailable for ${key}; continuing in memory.`, secondError);
       return false;
     }
   }
@@ -66,34 +66,34 @@ function writeArray<T>(key: string, items: T[], trimTo: number): boolean {
 
 export function saveGeneratedPlaylist(bundle: StoredPlaylistBundle): boolean {
   if (typeof window !== "undefined") {
-    window.__frydaLatestPlaylist = bundle;
+    window.__memoryplaylistLatestPlaylist = bundle;
   }
 
   const experiencesOk = bundle.experience
-    ? writeArray("fryda_experiences", [...readArray<Record<string, unknown>>("fryda_experiences"), bundle.experience], 20)
+    ? writeArray("memoryplaylist_experiences", [...readArray<Record<string, unknown>>("memoryplaylist_experiences"), bundle.experience], 20)
     : true;
 
-  const playlistsOk = writeArray("fryda_playlists", [...readArray<StoredPlaylist>("fryda_playlists"), bundle.playlist], 50);
-  const tracksOk = writeArray("fryda_tracks", [...readArray<StoredTrack>("fryda_tracks"), ...bundle.tracks], 2000);
+  const playlistsOk = writeArray("memoryplaylist_playlists", [...readArray<StoredPlaylist>("memoryplaylist_playlists"), bundle.playlist], 50);
+  const tracksOk = writeArray("memoryplaylist_tracks", [...readArray<StoredTrack>("memoryplaylist_tracks"), ...bundle.tracks], 2000);
 
   return experiencesOk && playlistsOk && tracksOk;
 }
 
 export function loadGeneratedPlaylist(playlistId: string): StoredPlaylistBundle | null {
-  const memoryBundle = typeof window !== "undefined" ? window.__frydaLatestPlaylist : undefined;
+  const memoryBundle = typeof window !== "undefined" ? window.__memoryplaylistLatestPlaylist : undefined;
   if (memoryBundle?.playlist.id === playlistId) {
     return memoryBundle;
   }
 
-  const playlist = readArray<StoredPlaylist>("fryda_playlists").find((p) => p.id === playlistId);
-  const tracks = readArray<StoredTrack>("fryda_tracks").filter((t) => t.playlist_id === playlistId);
+  const playlist = readArray<StoredPlaylist>("memoryplaylist_playlists").find((p) => p.id === playlistId);
+  const tracks = readArray<StoredTrack>("memoryplaylist_tracks").filter((t) => t.playlist_id === playlistId);
 
   if (!playlist) return null;
   return { playlist, tracks };
 }
 
 export function listGeneratedPlaylists(limit = 5): StoredPlaylist[] {
-  return readArray<StoredPlaylist>("fryda_playlists")
+  return readArray<StoredPlaylist>("memoryplaylist_playlists")
     .sort((a, b) => String(b.created_at ?? "").localeCompare(String(a.created_at ?? "")))
     .slice(0, limit);
 }
@@ -145,13 +145,13 @@ export function importSharedPlaylistFromUrl(hash: string): StoredPlaylistBundle 
     saveGeneratedPlaylist(bundle);
     return bundle;
   } catch (error) {
-    console.warn("Fryda could not import shared playlist payload.", error);
+    console.warn("Memory Playlist could not import shared playlist payload.", error);
     return null;
   }
 }
 
 export function saveLikedTrack(track: { track_name: string; artist: string }): boolean {
-  const prefs = readArray<Record<string, unknown>>("fryda_preferences");
+  const prefs = readArray<Record<string, unknown>>("memoryplaylist_preferences");
   prefs.push({
     id: Date.now().toString(),
     track_name: track.track_name,
@@ -159,5 +159,5 @@ export function saveLikedTrack(track: { track_name: string; artist: string }): b
     liked: true,
     created_at: new Date().toISOString(),
   });
-  return writeArray("fryda_preferences", prefs, 500);
+  return writeArray("memoryplaylist_preferences", prefs, 500);
 }

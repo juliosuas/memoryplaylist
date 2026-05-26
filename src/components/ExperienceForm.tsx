@@ -9,11 +9,11 @@ import {
   type PhotoAnalysisErrorCode,
 } from "@/lib/photoAnalysis";
 
-import { PhotoUpload } from "./fryda/PhotoUpload";
-import { ArtistSearch } from "./fryda/ArtistSearch";
-import { FormSection } from "./fryda/FormSection";
-import { GenerateButton } from "./fryda/GenerateButton";
-import { PlaylistLoader } from "./fryda/PlaylistLoader";
+import { PhotoUpload } from "./memory-playlist/PhotoUpload";
+import { ArtistSearch } from "./memory-playlist/ArtistSearch";
+import { FormSection } from "./memory-playlist/FormSection";
+import { GenerateButton } from "./memory-playlist/GenerateButton";
+import { PlaylistLoader } from "./memory-playlist/PlaylistLoader";
 
 const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 const DEFAULT_DISCOVERY_PERCENTAGE = 15;
@@ -245,7 +245,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!photoPreview) {
-      toast.error("Sube una foto para que Fryda detecte el mood y arme la playlist.");
+      toast.error("Sube una foto para que Memory Playlist detecte el mood y arme la playlist.");
       return;
     }
 
@@ -372,7 +372,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      <FormSection title="Sube una foto" subtitle="Fryda detecta el mood, el momento y la energía automáticamente.">
+      <FormSection title="Sube una foto" subtitle="Memory Playlist detecta el mood, el momento y la energía automáticamente.">
         <PhotoUpload
           photoPreview={photoPreview}
           photoInsight={photoInsight}
@@ -390,7 +390,7 @@ export const ExperienceForm = ({ onPlaylistGenerated }: ExperienceFormProps) => 
         </div>
       )}
 
-      <FormSection title="Opcional: afina con tu gusto" subtitle="Si agregas artistas o canciones, Fryda se pega más a tu sonido. Si no, la foto manda.">
+      <FormSection title="Opcional: afina con tu gusto" subtitle="Si agregas artistas o canciones, Memory Playlist se pega más a tu sonido. Si no, la foto manda.">
         <ArtistSearch
           selectedTags={selectedTags}
           onAddTag={(tag) => setSelectedTags([...selectedTags, tag])}

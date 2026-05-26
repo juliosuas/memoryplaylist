@@ -9,7 +9,7 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test:e2e:local": "node e2e-fryda-local.cjs"
+    "test:e2e:local": "node e2e-memory-playlist-local.cjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

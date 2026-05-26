@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Music, Heart, Sparkles, ArrowLeft, ExternalLink } from "lucide-react";
-import { SharePlaylist } from "@/components/fryda/SharePlaylist";
+import { SharePlaylist } from "@/components/memory-playlist/SharePlaylist";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { loadGeneratedPlaylist, saveLikedTrack, type StoredPlaylist } from "@/lib/localPlaylistStore";

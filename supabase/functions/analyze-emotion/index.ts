@@ -272,7 +272,7 @@ serve(async (req) => {
       console.warn(userId ? "LOVABLE_API_KEY no configurada; usando detector local de emoción." : "Anonymous request; using local emotion detector.");
     }
 
-    // Anonymous or unconfigured Supabase flows still need to work for Fryda.
+    // Anonymous or unconfigured Supabase flows still need to work for Memory Playlist.
     // Return a complete deterministic payload without attempting RLS-protected writes.
     if (!userId || !supabase) {
       const tracks = generateMockPlaylist(emotion, discovery, []);

@@ -58,7 +58,7 @@ export const SharePlaylist = ({ playlist, tracks, config }: SharePlaylistProps) 
     .slice(0, 10)
     .map((track, index) => `${index + 1}. ${track.track_name} - ${track.artist}`)
     .join("\n");
-  const shareText = `Mi playlist ${emotionLabel} en Fryda:\n${trackListText}\n\n${portableShareUrl}`;
+  const shareText = `Mi playlist ${emotionLabel} en Memory Playlist:\n${trackListText}\n\n${portableShareUrl}`;
 
   const copy = async (value: string, kind: "list" | "link") => {
     try {
@@ -79,7 +79,7 @@ export const SharePlaylist = ({ playlist, tracks, config }: SharePlaylistProps) 
 
     try {
       await navigator.share({
-        title: `Playlist ${emotionLabel} en Fryda`,
+        title: `Playlist ${emotionLabel} en Memory Playlist`,
         text: shareText,
         url: portableShareUrl,
       });

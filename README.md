@@ -1,14 +1,14 @@
-# Fryda
+# Memory Playlist
 
 **Every memory has its song.**
 
-Fryda turns a photo into an AI-guided music recommendation list. It reads the mood, scene, energy, and visual cues, then suggests tracks that fit the moment.
+Memory Playlist turns a photo into an AI-guided music recommendation list. It reads the mood, scene, energy, and visual cues, then suggests tracks that fit the moment.
 
-Important product truth: Fryda does not create real playlists inside Spotify. It generates a local tracklist and opens YouTube/Spotify actions so users can review and save songs in the service they prefer.
+Important product truth: Memory Playlist does not create real playlists inside Spotify. It generates a local tracklist and opens YouTube/Spotify actions so users can review and save songs in the service they prefer.
 
 ## Lovable Positioning
 
-- Public name in the app: **Fryda**
+- Public name in the app: **Memory Playlist**
 - Demo promise: upload a memory photo, get a scored tracklist, share the result, and open YouTube/Spotify actions
 - Non-goal for this build: native Spotify playlist creation or account-connected music writes
 
@@ -102,7 +102,7 @@ Copy `.env.example` for local development. In Lovable, set the `VITE_` variables
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Lovable/Vite frontend | Yes for live photo AI | Supabase anon/public key |
 | `LOVABLE_API_KEY` | Supabase Edge Function secret | Optional fallback-safe | AI Gateway key used server-side only |
 
-If Supabase Edge Functions or `LOVABLE_API_KEY` are unavailable, Fryda intentionally fails open: the frontend still creates a local generated tracklist and opens it in YouTube or Spotify search.
+If Supabase Edge Functions or `LOVABLE_API_KEY` are unavailable, Memory Playlist intentionally fails open: the frontend still creates a local generated tracklist and opens it in YouTube or Spotify search.
 
 ## Contest Evidence Checklist
 
@@ -121,7 +121,7 @@ Use this section as the submission-facing evidence log. Replace placeholders wit
 
 ## Release Gates
 
-- First viewport uses the simpler **Fryda** design.
+- First viewport uses the simpler **Memory Playlist** design.
 - Product copy does not claim real Spotify playlist creation.
 - YouTube/Spotify actions are labeled as open/search actions.
 - README evidence placeholders are filled before contest submission.
@@ -135,7 +135,7 @@ Use this section as the submission-facing evidence log. Replace placeholders wit
 ```
 src/
 ├── components/
-│   ├── fryda/           # Fryda personality and music-guide components
+│   ├── memoryplaylist/           # Memory Playlist personality and music-guide components
 │   │   ├── ArtistSearch.tsx
 │   │   ├── DiscoverySlider.tsx
 │   │   ├── FormSection.tsx
