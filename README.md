@@ -1,30 +1,27 @@
-# VibePlaylist
+# Fryda
 
 **Every memory has its song.**
 
-VibePlaylist turns a photo and a short memory into an AI-guided music recommendation list. Fryda is the in-app guide: it reads the mood, scene, energy, and memory text, then suggests tracks that fit the moment.
+Fryda turns a photo into an AI-guided music recommendation list. It reads the mood, scene, energy, and visual cues, then suggests tracks that fit the moment.
 
-Important product truth: VibePlaylist does not create real playlists inside Spotify or Apple Music. It generates a local tracklist and opens search/listening actions in YouTube, Spotify, and Apple Music so users can review and save songs in the service they prefer.
+Important product truth: Fryda does not create real playlists inside Spotify. It generates a local tracklist and opens YouTube/Spotify actions so users can review and save songs in the service they prefer.
 
-## Lovable Contest Positioning
+## Lovable Positioning
 
-- Public name: **VibePlaylist**
-- Personality retained: **Fryda**, the friendly music guide inside the product
-- Demo promise: upload a memory photo, describe the vibe, get a scored tracklist, share the result, and open honest music-service searches
-- Non-goal for contest build: native Spotify/Apple playlist creation or account-connected music writes
+- Public name in the app: **Fryda**
+- Demo promise: upload a memory photo, get a scored tracklist, share the result, and open YouTube/Spotify actions
+- Non-goal for this build: native Spotify playlist creation or account-connected music writes
 
 ## ✨ Features
 
 - **📸 AI Photo Analysis** — Computer vision extracts mood, scene, lighting, colors, and energy from your photos
-- **🎭 Emotion Detection** — AI-powered emotion analysis from text descriptions
 - **🎵 Smart Tracklist Generation** — 25 recommended tracks scored by mood, moment type, visual analysis, and genre matching
 - **🔍 Artist & Song Search** — Tag specific artists or songs to influence recommendations
-- **🎚️ Discovery Slider** — Control the balance between familiar favorites and new discoveries
 - **🌙 Dark Mode** — Full light/dark theme support
 - **📱 Mobile-First** — Responsive design optimized for mobile
 - **🎉 Celebration UI** — Confetti animations and personalized closing messages per emotion
-- **🔗 Multi-Platform Open Actions** — Open YouTube playback where IDs exist, or open Spotify/Apple Music searches for the recommended songs
-- **📤 Share** — Share your generated tracklist with friends
+- **🔗 Music Open Actions** — Open YouTube playback where IDs exist, or open Spotify searches for the recommended songs
+- **📤 Basic Share** — Copy the generated tracklist or a portable restore link
 
 ## 🏗️ Architecture
 
@@ -105,7 +102,7 @@ Copy `.env.example` for local development. In Lovable, set the `VITE_` variables
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Lovable/Vite frontend | Yes for live photo AI | Supabase anon/public key |
 | `LOVABLE_API_KEY` | Supabase Edge Function secret | Optional fallback-safe | AI Gateway key used server-side only |
 
-If Supabase Edge Functions or `LOVABLE_API_KEY` are unavailable, VibePlaylist intentionally fails open: the frontend still creates a local generated tracklist and opens it in YouTube, Spotify, or Apple Music search.
+If Supabase Edge Functions or `LOVABLE_API_KEY` are unavailable, Fryda intentionally fails open: the frontend still creates a local generated tracklist and opens it in YouTube or Spotify search.
 
 ## Contest Evidence Checklist
 
@@ -120,14 +117,13 @@ Use this section as the submission-facing evidence log. Replace placeholders wit
 - Final lint command: `npm run lint` — PASS on 2026-05-26 with 7 existing shadcn fast-refresh warnings
 - Final local e2e command: `npm run test:e2e:local` — PASS on 2026-05-26; YouTube, Spotify, share restore, and console checks passed
 - Supabase Edge Functions configured in production: `Not confirmed before Lovable publish; app has local fallback tracklist generation`
-- Known limitation disclosed: Spotify and Apple actions are searches/open actions, not account-connected playlist creation
+- Known limitation disclosed: Spotify action is a search/open action, not account-connected playlist creation
 
 ## Release Gates
 
-- First viewport shows **VibePlaylist** as the public name.
-- Browser title and social metadata use **VibePlaylist**.
-- Product copy does not claim real Spotify or Apple Music playlist creation.
-- YouTube/Spotify/Apple actions are labeled as open/search actions.
+- First viewport uses the simpler **Fryda** design.
+- Product copy does not claim real Spotify playlist creation.
+- YouTube/Spotify actions are labeled as open/search actions.
 - README evidence placeholders are filled before contest submission.
 - `npm run lint` passes or every warning/error is documented. Current result: PASS with 7 existing shadcn fast-refresh warnings.
 - `npm run build` passes. Current result: PASS.

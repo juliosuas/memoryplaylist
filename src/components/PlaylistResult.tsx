@@ -100,26 +100,6 @@ const SCENE_LABELS: Record<string, string> = {
   concert: "concierto", travel: "viaje", home: "hogar", nature: "naturaleza",
 };
 
-const PHOTO_CHIP_LABELS: Record<string, string> = {
-  beach: "playa",
-  city: "ciudad",
-  nature: "naturaleza",
-  indoor: "interior",
-  party: "fiesta",
-  concert: "concierto",
-  sunset: "atardecer",
-  mountain: "montaña",
-  road: "viaje",
-  cafe: "café",
-  happy: "feliz",
-  melancholic: "melancólico",
-  energetic: "energético",
-  peaceful: "sereno",
-  romantic: "romántico",
-  nostalgic: "nostálgico",
-  adventurous: "aventura",
-};
-
 function buildDescription(playlist: StoredPlaylist): string {
   const parts: string[] = [];
 
@@ -243,16 +223,6 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
     toast.success("Abriendo búsqueda en Spotify");
   };
 
-  const openAppleMusicPlaylist = () => {
-    const topTracks = tracks
-      .slice(0, 5)
-      .map((t) => `${t.track_name} ${t.artist}`)
-      .join(" ");
-    const searchQuery = topTracks || (playlist?.emotion ? `${playlist.emotion} playlist` : "playlist");
-    window.open(`https://music.apple.com/search?term=${encodeURIComponent(searchQuery)}`, "_blank");
-    toast.success("Abriendo búsqueda en Apple Music");
-  };
-
   const openSpotifySearch = (track: Track) => {
     window.open(`https://open.spotify.com/search/${encodeURIComponent(`${track.track_name} ${track.artist}`)}`, "_blank");
   };
@@ -302,20 +272,12 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
 
       {/* Header with animated gradient shimmer */}
       <div
-        className={cn("relative min-h-[220px] rounded-2xl p-6 text-center overflow-hidden bg-gradient-to-br", config.gradient)}
+        className={cn("relative rounded-2xl p-6 text-center overflow-hidden bg-gradient-to-br", config.gradient)}
         style={{
           backgroundSize: "200% 200%",
           animation: "gradient-shift 4s ease infinite",
         }}
       >
-        {typeof playlist.photo_preview === "string" && playlist.photo_preview && (
-          <img
-            src={playlist.photo_preview}
-            alt="Recuerdo usado para crear la playlist"
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-black/10" />
         {/* Shimmer overlay */}
         <div
           className="absolute inset-0 opacity-20"
@@ -331,9 +293,6 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
           </span>
           <h2 className="text-2xl font-bold text-white capitalize">{playlist.emotion}</h2>
           <p className="text-white/80 text-sm">{tracks.length} canciones • {newCount} descubrimientos</p>
-          {typeof playlist.memory_text === "string" && playlist.memory_text && (
-            <p className="mx-auto max-w-sm text-sm text-white/90 line-clamp-2">"{playlist.memory_text}"</p>
-          )}
         </div>
       </div>
 
@@ -353,7 +312,7 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
       {/* Action buttons — music services */}
       <div className="space-y-2">
         {/* Primary row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <Button
             onClick={openYouTubePlaylist}
             className="flex-1 gap-2 h-12 rounded-xl text-white font-semibold"
@@ -368,15 +327,7 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
             style={{ background: "#1DB954" }}
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
-            Buscar Spotify
-          </Button>
-          <Button
-            onClick={openAppleMusicPlaylist}
-            className="flex-1 gap-2 h-12 rounded-xl text-white font-semibold"
-            style={{ background: "linear-gradient(135deg, #fc3c44, #f91c5c)" }}
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M23.994 6.124a9.23 9.23 0 0 0-.22-2.19c-.31-1.335-1.05-2.32-2.19-2.91-.7-.36-1.45-.52-2.21-.57-.76-.05-1.52-.04-2.28-.04H6.896c-.76 0-1.52-.01-2.28.04-.76.05-1.51.21-2.21.57C1.266 1.614.526 2.599.216 3.934c-.15.64-.21 1.29-.22 1.95A74.4 74.4 0 0 0-.006 7.9v8.2c0 .59.01 1.18.03 1.77.01.66.07 1.31.22 1.95.31 1.335 1.05 2.32 2.19 2.91.7.36 1.45.52 2.21.57.76.05 1.52.04 2.28.04H17.1c.76 0 1.52.01 2.28-.04.76-.05 1.51-.21 2.21-.57 1.14-.59 1.88-1.575 2.19-2.91.15-.64.21-1.29.22-1.95.02-.59.03-1.18.03-1.77V7.9c0-.59-.01-1.18-.03-1.77zM15.5 15.5h-1.75V10h-3.5v5.5H8.5V7.5h1.75v1a3 3 0 0 1 2.5-1.25A2.75 2.75 0 0 1 15.5 10v5.5z"/></svg>
-            Buscar Apple
+            Spotify
           </Button>
         </div>
         {/* Share button full-width */}
@@ -399,23 +350,6 @@ export const PlaylistResult = ({ playlistId, onBack }: PlaylistResultProps) => {
                 {track.is_new_discovery && <Sparkles className="w-3 h-3 text-accent flex-shrink-0" />}
               </div>
               <p className="text-sm text-muted-foreground truncate">{track.artist}</p>
-              <div className="mt-1 flex flex-wrap gap-1">
-                {track.is_new_discovery && (
-                  <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent">
-                    nuevo
-                  </span>
-                )}
-                {playlist.photo_analysis?.scene && (
-                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                    foto: {PHOTO_CHIP_LABELS[playlist.photo_analysis.scene] ?? playlist.photo_analysis.scene}
-                  </span>
-                )}
-                {playlist.photo_analysis?.mood && (
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                    mood: {PHOTO_CHIP_LABELS[playlist.photo_analysis.mood] ?? playlist.photo_analysis.mood}
-                  </span>
-                )}
-              </div>
             </div>
             <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
               <Button size="icon" variant="ghost" onClick={() => handleLike(track)}><Heart className="w-4 h-4" /></Button>

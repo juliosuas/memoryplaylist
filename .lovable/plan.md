@@ -1,23 +1,22 @@
-# VibePlaylist contest readiness plan
+# Fryda simple release plan
 
 ## Goal
 
-Prepare the app for the Lovable contest under the public name **VibePlaylist** while keeping **Fryda** as the useful in-product personality and music guide.
+Keep the Lovable app simple and demo-ready under the in-app name **Fryda**.
 
 ## Public positioning
 
-- First viewport should say **VibePlaylist** clearly.
-- Fryda remains in supporting copy as the guide that reads the memory and suggests music.
-- Metadata, social previews, README, and submission notes should use **VibePlaylist**.
-- Copy must stay honest: the app generates a local AI-guided tracklist and opens music-service searches/actions. It does not write real playlists into Spotify or Apple Music accounts.
+- First viewport should use the previous/simple Fryda presentation.
+- The main flow is photo upload -> playlist generation -> YouTube/Spotify -> basic share.
+- Copy must stay honest: the app generates a local AI-guided tracklist and opens music-service searches/actions. It does not write real playlists into Spotify accounts.
 
 ## Current release gates
 
-- [x] First viewport names VibePlaylist.
-- [x] `index.html` title, description, OG, and Twitter metadata name VibePlaylist.
-- [x] User-facing service actions avoid implying Spotify/Apple playlist creation.
+- [x] First viewport uses the simpler Fryda design.
+- [x] User-facing service actions avoid implying Spotify playlist creation.
+- [x] Extra contest-polish controls were removed from the primary flow.
 - [x] README contains contest evidence placeholders.
-- [x] README explicitly discloses Spotify/Apple are search/open actions.
+- [x] README explicitly discloses Spotify is a search/open action.
 - [x] `npm run lint` result recorded: PASS on 2026-05-26 with 7 existing shadcn fast-refresh warnings.
 - [x] `npm run build` result recorded: PASS on 2026-05-26.
 - [x] No push, deploy, or Lovable sync until Julio asks for it.
