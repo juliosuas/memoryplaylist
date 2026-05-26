@@ -115,6 +115,7 @@ export function createSharePayload(bundle: StoredPlaylistBundle): string {
       new_music_percentage: bundle.playlist.new_music_percentage,
       memory_text: bundle.playlist.memory_text,
       photo_analysis: bundle.playlist.photo_analysis,
+      photo_preview: bundle.playlist.photo_preview,
     },
     tracks: bundle.tracks.map((track) => ({
       id: track.id,

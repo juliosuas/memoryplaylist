@@ -55,6 +55,12 @@ const path = require('path');
   await sharedPage.getByRole('button', { name: /Abrir en YouTube/i }).waitFor({ timeout: 5000 });
   await sharedPage.getByRole('button', { name: /Buscar en Spotify/i }).waitFor({ timeout: 5000 });
   await sharedPage.getByRole('button', { name: /Buscar en Apple/i }).waitFor({ timeout: 5000 });
+  const sharedRestored = await sharedPage.evaluate(() => {
+    const raw = localStorage.getItem('memoryplaylist_playlists');
+    const playlists = raw ? JSON.parse(raw) : [];
+    return Boolean(playlists?.[0]?.photo_preview);
+  });
+  if (!sharedRestored) throw new Error('Portable shared playlist did not restore photo_preview');
   await sharedPage.screenshot({ path: path.join(outDir, '04-shared-link-result.png'), fullPage: true });
   await sharedContext.close();
 
