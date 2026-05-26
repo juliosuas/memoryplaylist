@@ -28,7 +28,7 @@ const Index = () => {
               <Heart className="w-5 h-5 text-primary-foreground fill-current" />
             </div>
             <div className="text-left">
-              <h1 className="text-xl font-bold text-gradient">Fryda</h1>
+              <h1 className="text-xl font-bold text-gradient">VibePlaylist</h1>
               <p className="text-xs text-muted-foreground -mt-0.5">Every memory has its song</p>
             </div>
           </button>
@@ -42,10 +42,10 @@ const Index = () => {
         {!currentPlaylistId && (
           <div className="text-center mb-10 animate-fade-up">
             <h2 className="text-4xl sm:text-5xl font-bold text-gradient mb-3">
-              Revive tus recuerdos
+              VibePlaylist
             </h2>
             <p className="text-muted-foreground text-lg max-w-md mx-auto">
-              Sube una foto, cuéntanos cómo te sentías, y crearemos la playlist perfecta para ese momento.
+              Sube una foto y Fryda arma una playlist simple para ese momento.
             </p>
           </div>
         )}

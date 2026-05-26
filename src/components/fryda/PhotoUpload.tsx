@@ -61,10 +61,8 @@ export const PhotoUpload = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && isAcceptedPhoto(file)) {
+    if (file) {
       onPhotoChange(file);
-    } else if (file) {
-      toast.error("Solo se permiten imágenes (JPG, PNG, WebP o HEIC de iPhone)");
     }
     // Allow selecting the same iPhone photo again after an error/retry.
     e.currentTarget.value = "";
@@ -186,6 +184,7 @@ export const PhotoUpload = ({
       <input
         ref={inputRef}
         type="file"
+        capture="environment"
         accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif"
         onChange={handleInputChange}
         className="hidden"

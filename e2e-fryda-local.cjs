@@ -24,7 +24,7 @@ const path = require('path');
 
   await page.goto(baseUrl, { waitUntil: 'networkidle', timeout: 30000 });
   await page.screenshot({ path: path.join(outDir, '01-home.png'), fullPage: true });
-  await page.locator('main h2', { hasText: 'Revive tus recuerdos' }).waitFor({ timeout: 10000 });
+  await page.locator('main h2', { hasText: 'VibePlaylist' }).waitFor({ timeout: 10000 });
   await page.locator('input[type="file"]').setInputFiles(imgPath);
   await page.getByAltText('Tu recuerdo').waitFor({ timeout: 10000 });
   await page.getByText(/Lectura de la foto|Ajustaré la playlist/i).waitFor({ timeout: 12000 });
