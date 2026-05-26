@@ -10,7 +10,10 @@ const path = require('path');
   fs.writeFileSync(imgPath, Buffer.from(pngBase64, 'base64'));
 
   const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({ acceptDownloads: true });
+  const context = await browser.newContext({
+    acceptDownloads: true,
+    permissions: ['clipboard-read', 'clipboard-write'],
+  });
   const page = await context.newPage();
   const events = { console: [], pageErrors: [], popups: [] };
   page.on('console', msg => {
@@ -20,16 +23,31 @@ const path = require('path');
 
   await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle', timeout: 30000 });
   await page.screenshot({ path: path.join(outDir, '01-home.png'), fullPage: true });
-  await page.getByText('Revive tus recuerdos').waitFor({ timeout: 10000 });
+  await page.locator('main h2', { hasText: 'VibePlaylist' }).waitFor({ timeout: 10000 });
   await page.locator('input[type="file"]').setInputFiles(imgPath);
   await page.getByAltText('Tu recuerdo').waitFor({ timeout: 10000 });
   await page.getByText(/Lectura de la foto|Ajustaré la playlist/i).waitFor({ timeout: 12000 });
   await page.screenshot({ path: path.join(outDir, '02-form-filled.png'), fullPage: true });
   await page.getByRole('button', { name: /Crear playlist/i }).click();
-  await page.getByText(/canciones/).waitFor({ timeout: 15000 });
   await page.getByRole('button', { name: /YouTube/i }).waitFor({ timeout: 5000 });
   await page.getByRole('button', { name: /Spotify/i }).waitFor({ timeout: 5000 });
   await page.screenshot({ path: path.join(outDir, '03-playlist-result.png'), fullPage: true });
+
+  await page.getByRole('button', { name: /Compartir/i }).click();
+  await page.getByRole('button', { name: /Copiar lista/i }).click();
+  const sharedText = await page.evaluate(() => navigator.clipboard.readText());
+  const sharedUrl = sharedText.match(/https?:\/\/\S+#share=[^\s]+/)?.[0];
+  if (!sharedUrl) throw new Error(`Share text did not include a portable #share URL: ${sharedText.slice(0, 160)}`);
+  await page.keyboard.press('Escape');
+  await page.getByRole('dialog').waitFor({ state: 'hidden', timeout: 5000 });
+
+  const sharedContext = await browser.newContext();
+  const sharedPage = await sharedContext.newPage();
+  await sharedPage.goto(sharedUrl, { waitUntil: 'networkidle', timeout: 30000 });
+  await sharedPage.getByText(/Nueva experiencia/).waitFor({ timeout: 10000 });
+  await sharedPage.getByRole('button', { name: /YouTube/i }).waitFor({ timeout: 5000 });
+  await sharedPage.screenshot({ path: path.join(outDir, '04-shared-link-result.png'), fullPage: true });
+  await sharedContext.close();
 
   const [ytPopup] = await Promise.all([
     context.waitForEvent('page', { timeout: 10000 }),
@@ -53,7 +71,7 @@ const path = require('path');
   if (!/Nueva experiencia/.test(resultText)) throw new Error('Playlist result did not render expected navigation');
   if (events.pageErrors.length) throw new Error(`Page errors: ${events.pageErrors.join(' | ')}`);
 
-  console.log(JSON.stringify({ ok: true, youtubeUrl: ytUrl, spotifyUrl: spUrl, screenshots: ['test-artifacts/01-home.png','test-artifacts/02-form-filled.png','test-artifacts/03-playlist-result.png'], console: events.console.slice(0, 10) }, null, 2));
+  console.log(JSON.stringify({ ok: true, youtubeUrl: ytUrl, spotifyUrl: spUrl, sharedUrlOk: true, screenshots: ['test-artifacts/01-home.png','test-artifacts/02-form-filled.png','test-artifacts/03-playlist-result.png','test-artifacts/04-shared-link-result.png'], console: events.console.slice(0, 10) }, null, 2));
   await browser.close();
 })().catch(async (err) => {
   console.error(err);

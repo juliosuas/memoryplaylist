@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -47,6 +49,44 @@ function jsonResponse(payload: Record<string, unknown>, status = 200, extraHeade
     status,
     headers: { ...corsHeaders, ...extraHeaders, "Content-Type": "application/json" },
   });
+}
+
+type AuthContext = {
+  client: any | null;
+  userId: string | null;
+};
+
+async function getAuthContext(req: Request): Promise<AuthContext> {
+  const authHeader = req.headers.get("Authorization") || "";
+  if (!authHeader.startsWith("Bearer ")) {
+    return { client: null, userId: null };
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn("Supabase anon env missing; treating request as anonymous.");
+    return { client: null, userId: null };
+  }
+
+  const token = authHeader.replace("Bearer ", "").trim();
+  if (!token) return { client: null, userId: null };
+
+  const client = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+
+  try {
+    const { data, error } = await client.auth.getClaims(token);
+    if (error || !data?.claims?.sub) {
+      console.warn("Invalid user JWT; treating request as anonymous.");
+      return { client: null, userId: null };
+    }
+    return { client, userId: data.claims.sub as string };
+  } catch (authError) {
+    console.warn("Auth claim verification failed; treating request as anonymous:", authError);
+    return { client: null, userId: null };
+  }
 }
 
 function normalizeEmotion(value: string | null | undefined, fallback: string): string {
@@ -103,8 +143,8 @@ function fallbackEmotion(description: string): string {
 }
 
 // ── Rate Limiting ────────────────────────────────────────────
-async function checkRateLimit(supabase: any, userId: string): Promise<boolean> {
-  if (!supabase || !userId) return true;
+async function checkRateLimit(supabase: any, userId: string): Promise<{ allowed: boolean; unavailable: boolean }> {
+  if (!supabase || !userId) return { allowed: false, unavailable: true };
   try {
     const { data, error } = await supabase.rpc("check_rate_limit", {
       p_user_id: userId,
@@ -114,12 +154,12 @@ async function checkRateLimit(supabase: any, userId: string): Promise<boolean> {
     });
     if (error) {
       console.error("Rate limit check error:", error);
-      return true; // Fail open
+      return { allowed: false, unavailable: true };
     }
-    return data === true;
+    return { allowed: data === true, unavailable: false };
   } catch (err) {
     console.error("Rate limit exception:", err);
-    return true;
+    return { allowed: false, unavailable: true };
   }
 }
 
@@ -135,26 +175,10 @@ serve(async (req) => {
       return jsonResponse({ error: "Content-Type debe ser application/json" }, 415);
     }
 
-    // ── Authentication: use a valid user JWT when present, but do not make
-    // the emotion engine unusable for anonymous/demo flows. If auth/env is
-    // missing we still return a deterministic playlist payload instead of 401.
-    const authHeader = req.headers.get("Authorization") || "";
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-    const authClient = supabaseUrl && supabaseAnonKey && authHeader.startsWith("Bearer ")
-      ? createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader } } })
-      : null;
-
-    let userId: string | null = null;
-    if (authClient && authHeader.startsWith("Bearer ")) {
-      try {
-        const token = authHeader.replace("Bearer ", "");
-        const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
-        userId = claimsError ? null : (claimsData?.claims?.sub as string | undefined) ?? null;
-      } catch (authError) {
-        console.warn("Auth claim check failed; continuing with anonymous fallback:", authError);
-      }
-    }
+    // ── Authentication: only a JWT verified with the Supabase anon key can
+    // reach rate limiting, database writes, or paid AI. Anonymous/demo traffic
+    // remains supported by the deterministic local fallback below.
+    const { client: authClient, userId } = await getAuthContext(req);
 
     const body = await req.json();
 
@@ -165,6 +189,8 @@ serve(async (req) => {
     }
 
     const { description, photoUrl, discoveryPercentage } = body;
+    const discovery = Number.isFinite(Number(discoveryPercentage)) ? Number(discoveryPercentage) : 50;
+    let emotion = fallbackEmotion(description);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
@@ -173,8 +199,18 @@ serve(async (req) => {
 
     // ── Rate limiting ────────────────────────────────────────
     if (userId) {
-      const allowed = await checkRateLimit(supabase, userId);
-      if (!allowed) {
+      const rateLimit = await checkRateLimit(supabase, userId);
+      if (rateLimit.unavailable) {
+        const tracks = generateMockPlaylist(emotion, discovery, []);
+        return jsonResponse({
+          playlistId: `local-${Date.now()}`,
+          emotion,
+          tracksCount: tracks.length,
+          tracks,
+          warning: "rate_limit_unavailable",
+        });
+      }
+      if (!rateLimit.allowed) {
         return jsonResponse(
           { error: "Límite de solicitudes excedido. Máximo 10 análisis por minuto." },
           429,
@@ -207,9 +243,7 @@ serve(async (req) => {
       });
     }
 
-    let emotion = fallbackEmotion(description);
-
-    if (LOVABLE_API_KEY) {
+    if (userId && LOVABLE_API_KEY) {
       try {
         // Analizar emoción con Lovable AI
         const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -235,10 +269,8 @@ serve(async (req) => {
         console.error("Excepción de IA, usando fallback:", aiError);
       }
     } else {
-      console.warn("LOVABLE_API_KEY no configurada; usando detector local de emoción.");
+      console.warn(userId ? "LOVABLE_API_KEY no configurada; usando detector local de emoción." : "Anonymous request; using local emotion detector.");
     }
-
-    const discovery = Number.isFinite(Number(discoveryPercentage)) ? Number(discoveryPercentage) : 50;
 
     // Anonymous or unconfigured Supabase flows still need to work for Fryda.
     // Return a complete deterministic payload without attempting RLS-protected writes.
@@ -389,10 +421,14 @@ function generateMockPlaylist(
   
   if (userPreferences.length > 0 && discoveryPercentage < 100) {
     const userTracksCount = Math.floor((tracks.length * (100 - discoveryPercentage)) / 100);
-    const randomUserTracks = userPreferences
-      .sort(() => Math.random() - 0.5)
-      .slice(0, userTracksCount)
+    const userTracks = userPreferences
       .map((pref) => ({
+        pref,
+        order: hashString(`${emotion}:${discoveryPercentage}:${pref.track_name}:${pref.artist}`),
+      }))
+      .sort((a, b) => a.order - b.order)
+      .slice(0, userTracksCount)
+      .map(({ pref }) => ({
         name: pref.track_name,
         artist: pref.artist,
         album: "",
@@ -404,7 +440,7 @@ function generateMockPlaylist(
       isNew: true,
     }));
 
-    tracks = [...randomUserTracks, ...newTracks];
+    tracks = [...userTracks, ...newTracks];
   } else {
     tracks = tracks.map((t, i) => ({
       ...t,
@@ -412,5 +448,20 @@ function generateMockPlaylist(
     }));
   }
 
-  return tracks.sort(() => Math.random() - 0.5).slice(0, 10);
+  return tracks
+    .map((track) => ({
+      track,
+      order: hashString(`${emotion}:${discoveryPercentage}:${track.name}:${track.artist}`),
+    }))
+    .sort((a, b) => a.order - b.order)
+    .map(({ track }) => track)
+    .slice(0, 10);
+}
+
+function hashString(value: string): number {
+  let hash = 0;
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
 }

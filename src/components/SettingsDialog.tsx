@@ -20,8 +20,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Settings, Trash2, HardDrive } from "lucide-react";
+import { Settings, Trash2, HardDrive, Music } from "lucide-react";
 import { toast } from "sonner";
+import { listGeneratedPlaylists, type StoredPlaylist } from "@/lib/localPlaylistStore";
 
 interface StorageMetrics {
   experiences: number;
@@ -60,10 +61,12 @@ const calculateStorageMetrics = (): StorageMetrics => {
 
 interface SettingsDialogProps {
   triggerClassName?: string;
+  onOpenPlaylist?: (playlistId: string) => void;
 }
 
-export const SettingsDialog = ({ triggerClassName }: SettingsDialogProps) => {
+export const SettingsDialog = ({ triggerClassName, onOpenPlaylist }: SettingsDialogProps) => {
   const [open, setOpen] = useState(false);
+  const [recentPlaylists, setRecentPlaylists] = useState<StoredPlaylist[]>([]);
   const [metrics, setMetrics] = useState<StorageMetrics>({
     experiences: 0,
     playlists: 0,
@@ -75,6 +78,7 @@ export const SettingsDialog = ({ triggerClassName }: SettingsDialogProps) => {
   useEffect(() => {
     if (open) {
       setMetrics(calculateStorageMetrics());
+      setRecentPlaylists(listGeneratedPlaylists(5));
     }
   }, [open]);
 
@@ -85,6 +89,7 @@ export const SettingsDialog = ({ triggerClassName }: SettingsDialogProps) => {
     localStorage.removeItem("fryda_preferences");
     
     setMetrics(calculateStorageMetrics());
+    setRecentPlaylists([]);
     toast.success("Almacenamiento local limpiado correctamente");
   };
 
@@ -137,6 +142,33 @@ export const SettingsDialog = ({ triggerClassName }: SettingsDialogProps) => {
             <p className="text-lg font-semibold">{metrics.totalSize}</p>
             <p className="text-xs text-muted-foreground">Espacio total utilizado</p>
           </div>
+
+          {recentPlaylists.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Music className="h-4 w-4 text-primary" />
+                Playlists recientes
+              </div>
+              <div className="space-y-2">
+                {recentPlaylists.map((playlist) => (
+                  <button
+                    key={String(playlist.id)}
+                    type="button"
+                    onClick={() => {
+                      onOpenPlaylist?.(String(playlist.id));
+                      setOpen(false);
+                    }}
+                    className="w-full rounded-xl border border-border/70 bg-muted/30 px-3 py-2 text-left transition-colors hover:bg-muted"
+                  >
+                    <p className="truncate text-sm font-medium">{String(playlist.name ?? "Playlist sin nombre")}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {playlist.emotion ?? "mood"} · {playlist.new_music_percentage ?? 0}% nuevas
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter className="flex-col sm:flex-col gap-2">

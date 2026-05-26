@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -57,8 +59,8 @@ function validateRequest(body: any): string | null {
 }
 
 // ── Rate Limiting ────────────────────────────────────────────
-async function checkRateLimit(supabase: any, userId: string): Promise<boolean> {
-  if (!supabase || !userId) return true;
+async function checkRateLimit(supabase: any, userId: string): Promise<{ allowed: boolean; unavailable: boolean }> {
+  if (!supabase || !userId) return { allowed: false, unavailable: true };
   try {
     const { data, error } = await supabase.rpc("check_rate_limit", {
       p_user_id: userId,
@@ -68,24 +70,12 @@ async function checkRateLimit(supabase: any, userId: string): Promise<boolean> {
     });
     if (error) {
       console.error("Rate limit check error:", error);
-      return true; // Allow on error (fail open)
+      return { allowed: false, unavailable: true };
     }
-    return data === true;
+    return { allowed: data === true, unavailable: false };
   } catch (err) {
     console.error("Rate limit exception:", err);
-    return true;
-  }
-}
-
-// ── Extract user ID from JWT ─────────────────────────────────
-function extractUserId(authHeader: string | null): string | null {
-  if (!authHeader) return null;
-  try {
-    const token = authHeader.replace("Bearer ", "");
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.sub || null;
-  } catch {
-    return null;
+    return { allowed: false, unavailable: true };
   }
 }
 
@@ -94,6 +84,44 @@ function jsonResponse(payload: Record<string, unknown>, status = 200, extraHeade
     status,
     headers: { ...corsHeaders, ...extraHeaders, "Content-Type": "application/json" },
   });
+}
+
+type AuthContext = {
+  client: any | null;
+  userId: string | null;
+};
+
+async function getAuthContext(req: Request): Promise<AuthContext> {
+  const authHeader = req.headers.get("Authorization") || "";
+  if (!authHeader.startsWith("Bearer ")) {
+    return { client: null, userId: null };
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn("Supabase anon env missing; treating request as anonymous.");
+    return { client: null, userId: null };
+  }
+
+  const token = authHeader.replace("Bearer ", "").trim();
+  if (!token) return { client: null, userId: null };
+
+  const client = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+
+  try {
+    const { data, error } = await client.auth.getClaims(token);
+    if (error || !data?.claims?.sub) {
+      console.warn("Invalid user JWT; treating request as anonymous.");
+      return { client: null, userId: null };
+    }
+    return { client, userId: data.claims.sub as string };
+  } catch (authError) {
+    console.warn("Auth claim verification failed; treating request as anonymous:", authError);
+    return { client: null, userId: null };
+  }
 }
 
 interface PhotoAnalysis {
@@ -351,26 +379,6 @@ serve(async (req) => {
       return jsonResponse({ error: validationError }, 400);
     }
 
-    // ── Rate limiting ────────────────────────────────────────
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const supabase = supabaseUrl && supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null;
-    if (!supabase) {
-      console.warn("Supabase service env missing; skipping rate limit and using functional fallback path.");
-    }
-
-    const userId = extractUserId(req.headers.get("authorization"));
-    if (userId) {
-      const allowed = await checkRateLimit(supabase, userId);
-      if (!allowed) {
-        return jsonResponse(
-          { error: "Límite de solicitudes excedido. Máximo 5 análisis por minuto." },
-          429,
-          { "Retry-After": "60" }
-        );
-      }
-    }
-
     const {
       photoBase64,
       selectedMood = "relajado",
@@ -379,12 +387,36 @@ serve(async (req) => {
       newMusicPercentage = 50,
     } = body;
 
+    // ── Authentication and rate limiting ─────────────────────
+    // Only JWTs verified with the Supabase anon key can reach rate limiting or
+    // paid AI. Anonymous/demo requests stay supported through local analysis.
+    const { client: authClient, userId } = await getAuthContext(req);
+    if (userId) {
+      const rateLimit = await checkRateLimit(authClient, userId);
+      if (rateLimit.unavailable) {
+        const fallbackAnalysis = fallbackPhotoAnalysis(selectedMood, selectedMomentType);
+        return jsonResponse({
+          success: true,
+          photoAnalysis: fallbackAnalysis,
+          musicProfile: buildMusicProfile(fallbackAnalysis, selectedMood, selectedMomentType, newMusicPercentage),
+          warning: "rate_limit_unavailable",
+        });
+      }
+      if (!rateLimit.allowed) {
+        return jsonResponse(
+          { error: "Límite de solicitudes excedido. Máximo 5 análisis por minuto." },
+          429,
+          { "Retry-After": "60" }
+        );
+      }
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     let photoAnalysis: PhotoAnalysis | null = null;
     let aiWarning: string | null = null;
 
-    if (photoBase64 && LOVABLE_API_KEY) {
+    if (photoBase64 && userId && LOVABLE_API_KEY) {
       console.log("Analizando foto con IA...");
 
       const analysisPrompt = `Analiza esta imagen y extrae patrones visuales para crear una playlist musical personalizada.
@@ -486,9 +518,9 @@ Analiza colores, iluminación, expresiones, ambiente y contexto visual para dete
         if (!aiWarning) aiWarning = "ai_unavailable";
         photoAnalysis = fallbackPhotoAnalysis(selectedMood, selectedMomentType);
       }
-    } else if (photoBase64 && !LOVABLE_API_KEY) {
-      console.warn("LOVABLE_API_KEY no configurada; usando análisis determinístico local.");
-      aiWarning = "local_fallback";
+    } else if (photoBase64) {
+      console.warn(userId ? "LOVABLE_API_KEY no configurada; usando análisis determinístico local." : "Anonymous request; using deterministic local photo analysis.");
+      aiWarning = userId ? "local_fallback" : "anonymous_fallback";
       photoAnalysis = fallbackPhotoAnalysis(selectedMood, selectedMomentType);
     }
 

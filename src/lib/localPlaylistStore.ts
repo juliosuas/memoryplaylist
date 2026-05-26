@@ -3,6 +3,8 @@ export interface StoredPlaylist {
   emotion?: string;
   moment_type?: string;
   new_music_percentage?: number;
+  photo_preview?: string;
+  memory_text?: string;
   photo_analysis?: {
     scene?: string;
     mood?: string;
@@ -88,6 +90,64 @@ export function loadGeneratedPlaylist(playlistId: string): StoredPlaylistBundle 
 
   if (!playlist) return null;
   return { playlist, tracks };
+}
+
+export function listGeneratedPlaylists(limit = 5): StoredPlaylist[] {
+  return readArray<StoredPlaylist>("fryda_playlists")
+    .sort((a, b) => String(b.created_at ?? "").localeCompare(String(a.created_at ?? "")))
+    .slice(0, limit);
+}
+
+export function createSharePayload(bundle: StoredPlaylistBundle): string {
+  const compact = {
+    playlist: {
+      id: bundle.playlist.id,
+      name: bundle.playlist.name,
+      emotion: bundle.playlist.emotion,
+      moment_type: bundle.playlist.moment_type,
+      new_music_percentage: bundle.playlist.new_music_percentage,
+      memory_text: bundle.playlist.memory_text,
+      photo_analysis: bundle.playlist.photo_analysis,
+    },
+    tracks: bundle.tracks.map((track) => ({
+      id: track.id,
+      playlist_id: track.playlist_id,
+      track_name: track.track_name,
+      artist: track.artist,
+      album: track.album,
+      is_new_discovery: track.is_new_discovery,
+      youtubeId: track.youtubeId,
+    })),
+  };
+
+  return btoa(encodeURIComponent(JSON.stringify(compact)));
+}
+
+export function importSharedPlaylistFromUrl(hash: string): StoredPlaylistBundle | null {
+  const match = hash.match(/(?:^#|&)share=([^&]+)/);
+  if (!match) return null;
+
+  try {
+    const parsed = JSON.parse(decodeURIComponent(atob(match[1]))) as StoredPlaylistBundle;
+    if (!parsed.playlist?.id || !Array.isArray(parsed.tracks)) return null;
+    const bundle = {
+      playlist: { ...parsed.playlist, id: String(parsed.playlist.id) },
+      tracks: parsed.tracks.map((track, index) => ({
+        ...track,
+        id: String(track.id ?? `${parsed.playlist.id}-${index}`),
+        playlist_id: String(track.playlist_id ?? parsed.playlist.id),
+        track_name: String(track.track_name ?? "Canción"),
+        artist: String(track.artist ?? "Artista"),
+        album: track.album ?? null,
+        is_new_discovery: Boolean(track.is_new_discovery),
+      })),
+    };
+    saveGeneratedPlaylist(bundle);
+    return bundle;
+  } catch (error) {
+    console.warn("Fryda could not import shared playlist payload.", error);
+    return null;
+  }
 }
 
 export function saveLikedTrack(track: { track_name: string; artist: string }): boolean {

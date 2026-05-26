@@ -339,6 +339,21 @@
   animation: gradient-shift 6s ease infinite;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
 .animate-shimmer {
   background: linear-gradient(90deg, transparent, hsla(0, 0%, 100%, 0.4), transparent);
   background-size: 200% 100%;

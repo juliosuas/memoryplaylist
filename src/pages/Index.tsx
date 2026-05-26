@@ -1,19 +1,25 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ExperienceForm } from "@/components/ExperienceForm";
 import { PlaylistResult } from "@/components/PlaylistResult";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Heart } from "lucide-react";
+import { importSharedPlaylistFromUrl } from "@/lib/localPlaylistStore";
 
 const Index = () => {
   const [currentPlaylistId, setCurrentPlaylistId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const shared = importSharedPlaylistFromUrl(window.location.hash);
+    if (shared) setCurrentPlaylistId(shared.playlist.id);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <SettingsDialog triggerClassName="" />
+          <SettingsDialog triggerClassName="" onOpenPlaylist={setCurrentPlaylistId} />
           <button
             onClick={() => setCurrentPlaylistId(null)}
             className="flex items-center gap-3 hover:opacity-80 transition-opacity"
@@ -22,8 +28,8 @@ const Index = () => {
               <Heart className="w-5 h-5 text-primary-foreground fill-current" />
             </div>
             <div className="text-left">
-              <h1 className="text-xl font-bold text-gradient">Fryda</h1>
-              <p className="text-xs text-muted-foreground -mt-0.5">Every memory has its song</p>
+              <h1 className="text-xl font-bold text-gradient">VibePlaylist</h1>
+              <p className="text-xs text-muted-foreground -mt-0.5">with Fryda as your music guide</p>
             </div>
           </button>
           <ThemeToggle />
@@ -36,10 +42,10 @@ const Index = () => {
         {!currentPlaylistId && (
           <div className="text-center mb-10 animate-fade-up">
             <h2 className="text-4xl sm:text-5xl font-bold text-gradient mb-3">
-              Revive tus recuerdos
+              VibePlaylist
             </h2>
             <p className="text-muted-foreground text-lg max-w-md mx-auto">
-              Sube una foto, cuéntanos cómo te sentías, y crearemos la playlist perfecta para ese momento.
+              Sube una foto, cuéntale el recuerdo a Fryda y recibe una lista de canciones para buscar y abrir en tus apps de música.
             </p>
           </div>
         )}

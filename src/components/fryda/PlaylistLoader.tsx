@@ -27,7 +27,7 @@ const NOTES = [
   { note: "🎶", left: "92%", delay: "1.8s", duration: "4s",   fontSize: "1.7rem" },
 ];
 
-const TARGET_SONGS = 20;
+const TARGET_SONGS = 25;
 
 interface PlaylistLoaderProps {
   hasPhoto: boolean;

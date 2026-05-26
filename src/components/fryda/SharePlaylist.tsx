@@ -1,19 +1,23 @@
 import { useState, useRef } from "react";
-import { Share2, Copy, Download, X, Link, Check } from "lucide-react";
+import { Share2, Download, ClipboardList, Check } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { createSharePayload, type StoredPlaylist, type StoredTrack } from "@/lib/localPlaylistStore";
 
 interface Track {
   id: string;
+  playlist_id?: string;
   track_name: string;
   artist: string;
+  album?: string | null;
+  youtubeId?: string;
   is_new_discovery: boolean;
 }
 
 interface SharePlaylistProps {
-  playlist: any;
+  playlist: StoredPlaylist;
   tracks: Track[];
   config: { emoji: string; gradient: string; gradientFrom: string; gradientTo: string };
 }
@@ -37,19 +41,36 @@ export const SharePlaylist = ({ playlist, tracks, config }: SharePlaylistProps) 
   const [copied, setCopied] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const shareUrl = window.location.href;
-  const emotionLabel = EMOTION_LABELS[playlist.emotion] || playlist.emotion;
+  const playlistEmotion = playlist.emotion ?? "playlist";
+  const emotionLabel = EMOTION_LABELS[playlistEmotion] || playlistEmotion;
   const previewTracks = tracks.slice(0, 6);
   const newCount = tracks.filter((t) => t.is_new_discovery).length;
+  const sharePayload = createSharePayload({
+    playlist,
+    tracks: tracks.map((track) => ({
+      id: track.id,
+      playlist_id: track.playlist_id ?? playlist.id,
+      track_name: track.track_name,
+      artist: track.artist,
+      album: track.album ?? null,
+      is_new_discovery: track.is_new_discovery,
+      youtubeId: track.youtubeId,
+    })) satisfies StoredTrack[],
+  });
+  const portableShareUrl = `${window.location.origin}${window.location.pathname}#share=${sharePayload}`;
+  const shareText = `Mi playlist ${emotionLabel} en Fryda:\n${tracks
+    .slice(0, 10)
+    .map((track, index) => `${index + 1}. ${track.track_name} - ${track.artist}`)
+    .join("\n")}\n\nCrea la tuya: ${portableShareUrl}`;
 
-  const handleCopyLink = async () => {
+  const handleCopySummary = async () => {
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(shareText);
       setCopied(true);
-      toast.success("¡Enlace copiado!");
+      toast.success("¡Lista copiada!");
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("No se pudo copiar el enlace");
+      toast.error("No se pudo copiar la lista");
     }
   };
 
@@ -58,14 +79,14 @@ export const SharePlaylist = ({ playlist, tracks, config }: SharePlaylistProps) 
       try {
         await navigator.share({
           title: `Mi playlist ${emotionLabel} en Fryda`,
-          text: `Escucha mi playlist personalizada: ${tracks.slice(0, 3).map((t) => `${t.track_name} - ${t.artist}`).join(", ")} y más`,
-          url: shareUrl,
+          text: shareText,
+          url: portableShareUrl,
         });
-      } catch (err: any) {
-        if (err.name !== "AbortError") toast.error("No se pudo compartir");
+      } catch (err: unknown) {
+        if (!(err instanceof DOMException) || err.name !== "AbortError") toast.error("No se pudo compartir");
       }
     } else {
-      handleCopyLink();
+      handleCopySummary();
     }
   };
 
@@ -84,7 +105,7 @@ export const SharePlaylist = ({ playlist, tracks, config }: SharePlaylistProps) 
         logging: false,
       });
       const link = document.createElement("a");
-      link.download = `fryda-playlist-${playlist.emotion}.png`;
+      link.download = `fryda-playlist-${playlistEmotion}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
       toast.success("¡Imagen descargada!");
@@ -98,12 +119,12 @@ export const SharePlaylist = ({ playlist, tracks, config }: SharePlaylistProps) 
     const text = encodeURIComponent(
       `🎵 Mi playlist "${emotionLabel}" en Fryda: ${tracks.slice(0, 2).map((t) => `${t.track_name} - ${t.artist}`).join(", ")}... #Fryda #Music`
     );
-    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(shareUrl)}`, "_blank");
+    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(portableShareUrl)}`, "_blank");
   };
 
   const handleShareWhatsApp = () => {
     const text = encodeURIComponent(
-      `🎵 Mira mi playlist "${emotionLabel}" generada con IA en Fryda!\n${tracks.slice(0, 3).map((t) => `• ${t.track_name} - ${t.artist}`).join("\n")}\n\nCrea la tuya: ${shareUrl}`
+      `🎵 Mira mi playlist "${emotionLabel}" generada con IA en Fryda!\n${tracks.slice(0, 3).map((t) => `• ${t.track_name} - ${t.artist}`).join("\n")}\n\nCrea la tuya: ${portableShareUrl}`
     );
     window.open(`https://wa.me/?text=${text}`, "_blank");
   };
@@ -123,6 +144,9 @@ export const SharePlaylist = ({ playlist, tracks, config }: SharePlaylistProps) 
         <DialogContent className="max-w-sm w-full p-0 overflow-hidden rounded-2xl gap-0">
           <DialogHeader className="px-6 pt-6 pb-3">
             <DialogTitle className="text-lg font-bold">Compartir playlist</DialogTitle>
+            <DialogDescription>
+              Descarga una imagen, copia la lista o comparte un enlace portable de esta playlist.
+            </DialogDescription>
           </DialogHeader>
 
           {/* Visual preview card */}
@@ -130,12 +154,20 @@ export const SharePlaylist = ({ playlist, tracks, config }: SharePlaylistProps) 
             <div
               ref={cardRef}
               className={cn(
-                "relative rounded-2xl overflow-hidden p-5 bg-gradient-to-br",
+                "relative min-h-[320px] rounded-2xl overflow-hidden p-5 bg-gradient-to-br",
                 config.gradient
               )}
               style={{ fontFamily: "system-ui, sans-serif" }}
             >
               {/* Shimmer overlay */}
+              {playlist.photo_preview && (
+                <img
+                  src={playlist.photo_preview}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-black/10" />
               <div
                 className="absolute inset-0 opacity-15"
                 style={{
@@ -197,11 +229,11 @@ export const SharePlaylist = ({ playlist, tracks, config }: SharePlaylistProps) 
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleCopyLink}
+                onClick={handleCopySummary}
                 className="gap-2 rounded-xl h-10"
               >
-                {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Link className="w-3.5 h-3.5" />}
-                {copied ? "¡Copiado!" : "Copiar enlace"}
+                {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <ClipboardList className="w-3.5 h-3.5" />}
+                {copied ? "¡Copiado!" : "Copiar lista"}
               </Button>
             </div>
 

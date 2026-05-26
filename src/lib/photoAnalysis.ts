@@ -26,8 +26,8 @@ export interface PhotoAnalysisPayload {
 
 export interface PhotoAnalysisData {
   success: boolean;
-  photoAnalysis: Record<string, any> | null;
-  musicProfile: Record<string, any> | null;
+  photoAnalysis: Record<string, unknown> | null;
+  musicProfile: Record<string, unknown> | null;
   warning: string | null;
 }
 
@@ -59,11 +59,11 @@ function clampEnergy(value: number): number {
 }
 
 function buildLocalMusicProfile(
-  photoAnalysis: Record<string, any> | null,
+  photoAnalysis: Record<string, unknown> | null,
   selectedMood: string,
   selectedMomentType: string,
   newMusicPercentage: number
-): Record<string, any> {
+): Record<string, unknown> {
   const moodEnergy: Record<string, [number, number]> = {
     enamorado: [4, 7],
     "nostálgico": [3, 6],
@@ -169,7 +169,7 @@ export async function analyzePhotoLocally(payload: PhotoAnalysisPayload): Promis
     };
   }
 
-  const analysis = await new Promise<Record<string, any>>((resolve) => {
+  const analysis = await new Promise<Record<string, unknown>>((resolve) => {
     const img = new Image();
     img.onload = () => {
       try {
@@ -321,8 +321,8 @@ async function singleAttempt(
       return { data: await analyzePhotoLocally(payload), error: null, status: resp.status };
     }
     return { data: json, error: null, status: resp.status };
-  } catch (err: any) {
-    if (err?.name === "AbortError") {
+  } catch (err: unknown) {
+    if (err instanceof DOMException && err.name === "AbortError") {
       return { data: null, error: "timeout", status: 0 };
     }
     return { data: null, error: "offline", status: 0 };
