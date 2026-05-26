@@ -106,17 +106,27 @@ const path = require('path');
   const paywallContext = await browser.newContext();
   const paywallPage = await paywallContext.newPage();
   await paywallPage.goto(baseUrl, { waitUntil: 'networkidle', timeout: 30000 });
-  await paywallPage.evaluate(() => {
-    localStorage.setItem('memoryplaylist_playlists', JSON.stringify([
-      { id: 'free-1', created_at: '2026-05-26T00:00:00.000Z' },
-      { id: 'free-2', created_at: '2026-05-26T00:01:00.000Z' },
-      { id: 'free-3', created_at: '2026-05-26T00:02:00.000Z' },
-    ]));
-  });
-  await paywallPage.reload({ waitUntil: 'networkidle' });
+  for (let i = 0; i < 3; i += 1) {
+    await paywallPage.locator('input[type="file"]').setInputFiles(imgPath);
+    await paywallPage.getByAltText('Tu recuerdo').waitFor({ timeout: 10000 });
+    await paywallPage.getByRole('button', { name: /Crear playlist/i }).click();
+    await paywallPage.getByRole('button', { name: /Abrir en YouTube/i }).waitFor({ timeout: 10000 });
+    await paywallPage.getByRole('button', { name: /Nueva experiencia/i }).click();
+  }
   await paywallPage.getByText(/Ya usaste tus 3 playlists gratis/i).waitFor({ timeout: 5000 });
   const generateDisabled = await paywallPage.getByRole('button', { name: /Crear playlist/i }).isDisabled();
   if (!generateDisabled) throw new Error('Free limit paywall did not disable playlist generation after 3 playlists');
+  await paywallPage.evaluate((url) => {
+    localStorage.setItem('memoryplaylist_checkout_mock_url', url);
+  }, `${baseUrl}?checkout=success`);
+  await paywallPage.getByRole('button', { name: /Desbloquear/i }).click();
+  await paywallPage.waitForFunction(() => {
+    const raw = localStorage.getItem('memoryplaylist_access');
+    return raw && JSON.parse(raw).unlocked === true;
+  }, null, { timeout: 5000 });
+  await paywallPage.reload({ waitUntil: 'networkidle' });
+  const paywallAfterUnlock = await paywallPage.getByText(/Ya usaste tus 3 playlists gratis/i).count();
+  if (paywallAfterUnlock !== 0) throw new Error('Paid unlock did not survive refresh');
   await paywallPage.screenshot({ path: path.join(outDir, '06-paywall.png'), fullPage: true });
   await paywallContext.close();
 

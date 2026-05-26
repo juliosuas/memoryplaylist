@@ -1,21 +1,29 @@
 import { Lock, Sparkles } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import type { PlaylistAccessState } from "@/lib/playlistAccess";
+import { createCheckoutSession } from "@/lib/checkout";
 
 interface PaywallCardProps {
   access: PlaylistAccessState;
 }
 
 export function PaywallCard({ access }: PaywallCardProps) {
-  const handleCheckout = () => {
-    if (!access.checkoutUrl) {
-      toast.error("Stripe todavía no está conectado. Falta configurar VITE_STRIPE_PAYMENT_LINK en Lovable.");
-      return;
-    }
+  const [isStartingCheckout, setIsStartingCheckout] = useState(false);
 
-    window.location.href = access.checkoutUrl;
+  const handleCheckout = async () => {
+    setIsStartingCheckout(true);
+    try {
+      const checkoutUrl = await createCheckoutSession();
+      window.location.href = checkoutUrl;
+    } catch (error) {
+      console.error("Checkout start failed:", error);
+      toast.error("Stripe todavía no está conectado. Falta configurar la Edge Function y sus secretos.");
+    } finally {
+      setIsStartingCheckout(false);
+    }
   };
 
   return (
@@ -34,11 +42,11 @@ export function PaywallCard({ access }: PaywallCardProps) {
 
       <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
         <p className="text-xs text-muted-foreground">
-          Acceso de lanzamiento: sin cuenta, sin fricción. Stripe maneja el pago.
+          Acceso de lanzamiento: USD $4.99 sugerido. Stripe maneja el pago.
         </p>
-        <Button type="button" variant="gradient" onClick={handleCheckout}>
+        <Button type="button" variant="gradient" onClick={handleCheckout} disabled={isStartingCheckout}>
           <Sparkles className="h-4 w-4" aria-hidden="true" />
-          Desbloquear
+          {isStartingCheckout ? "Abriendo Stripe..." : "Desbloquear"}
         </Button>
       </div>
     </section>

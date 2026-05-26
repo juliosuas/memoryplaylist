@@ -9,7 +9,6 @@ export interface PlaylistAccessState {
   remainingFree: number;
   isUnlocked: boolean;
   isLimitReached: boolean;
-  checkoutUrl: string;
 }
 
 interface StoredAccess {
@@ -25,14 +24,6 @@ function readJson<T>(key: string, fallback: T): T {
     console.warn(`Memory Playlist could not read ${key}; using fallback.`, error);
     return fallback;
   }
-}
-
-function getCheckoutUrl(): string {
-  return (
-    import.meta.env.VITE_STRIPE_PAYMENT_LINK ||
-    import.meta.env.VITE_STRIPE_CHECKOUT_URL ||
-    ""
-  );
 }
 
 export function syncPaidAccessFromUrl(): boolean {
@@ -68,6 +59,5 @@ export function getPlaylistAccessState(): PlaylistAccessState {
     remainingFree,
     isUnlocked,
     isLimitReached: !isUnlocked && generatedCount >= FREE_PLAYLIST_LIMIT,
-    checkoutUrl: getCheckoutUrl(),
   };
 }
