@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 (async () => {
+  const baseUrl = process.env.E2E_BASE_URL || 'http://127.0.0.1:4173/';
   const outDir = path.join(process.cwd(), 'test-artifacts');
   fs.mkdirSync(outDir, { recursive: true });
   const imgPath = path.join(outDir, 'mock-memory.png');
@@ -21,7 +22,7 @@ const path = require('path');
   });
   page.on('pageerror', err => events.pageErrors.push(err.message));
 
-  await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle', timeout: 30000 });
+  await page.goto(baseUrl, { waitUntil: 'networkidle', timeout: 30000 });
   await page.screenshot({ path: path.join(outDir, '01-home.png'), fullPage: true });
   await page.locator('main h2', { hasText: 'VibePlaylist' }).waitFor({ timeout: 10000 });
   await page.locator('input[type="file"]').setInputFiles(imgPath);
